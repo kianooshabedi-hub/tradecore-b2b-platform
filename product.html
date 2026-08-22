@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جزئیات محصول | TradeCore</title>
+  
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+  <!-- هدر (داینامیک) -->
+  <header id="app-header"></header>
+
+  <main id="main-content" style="padding: var(--space-xl) 0;">
+    <div class="container">
+      
+      <!-- مسیر راهنما (Breadcrumb) -->
+      <nav id="breadcrumb" class="breadcrumb" style="margin-bottom: var(--space-md); color: var(--color-text-muted); font-size: var(--font-size-sm);"></nav>
+
+      <!-- محفظه اصلی که اطلاعات محصول توسط JS در آن تزریق می‌شود -->
+      <div id="product-detail-container">
+        <div style="text-align: center; padding: 4rem;">در حال دریافت اطلاعات محصول...</div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- فوتر (داینامیک) -->
+  <footer id="app-footer"></footer>
+
+  <script type="module" src="js/pages/product.js"></script>
+</body>
+</html>

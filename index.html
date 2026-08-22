@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>پلتفرم جامع B2B | تجارت جهانی هوشمند</title>
+  
+  <!-- اتصال فایل‌های CSS -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+  <!-- هدر سایت (توسط جاوااسکریپت رندر می‌شود تا در همه صفحات مشترک باشد) -->
+  <header id="app-header"></header>
+
+  <!-- محتوای اصلی صفحه -->
+  <main id="main-content">
+    
+    <!-- بخش هیرو (Hero) و جستجوی اصلی -->
+    <section class="hero-section">
+      <div class="container">
+        <h1 class="hero-title">ارتباط بی‌واسطه با تولیدکنندگان و خریداران جهانی</h1>
+        <p class="hero-subtitle">محصولات، تامین‌کنندگان و فرصت‌های تجاری را جستجو کنید</p>
+        
+        <!-- باکس جستجو -->
+        <div id="search-container" class="search-box">
+          <!-- منطق جستجو اینجا تزریق می‌شود -->
+        </div>
+      </div>
+    </section>
+
+    <!-- بخش دسته‌بندی‌های برتر -->
+    <section class="categories-section">
+      <div class="container">
+        <h2 class="section-title">دسته‌بندی‌های برتر صنایع</h2>
+        <div id="category-grid" class="grid-container">
+          <!-- کارت‌های دسته‌بندی از لایه Data توسط JS خوانده و اینجا چیده می‌شوند -->
+        </div>
+      </div>
+    </section>
+
+    <!-- بخش محصولات منتخب -->
+    <section class="featured-products-section">
+      <div class="container">
+        <h2 class="section-title">محصولات پیشنهادی</h2>
+        <div id="product-grid" class="grid-container">
+          <!-- کارت‌های محصول اینجا چیده می‌شوند -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- فوتر سایت (توسط جاوااسکریپت رندر می‌شود) -->
+  <footer id="app-footer"></footer>
+
+  <!-- اسکریپت اصلی صفحه به صورت Module -->
+  <script type="module" src="js/pages/home.js"></script>
+
+</body>
+</html>

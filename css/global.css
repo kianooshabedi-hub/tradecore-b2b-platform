@@ -1,0 +1,91 @@
+/* css/global.css */
+
+/* ریست کردن استایل‌های پیش‌فرض مرورگرها */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: var(--font-family-main);
+    background-color: var(--color-background);
+    color: var(--color-text-main);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  a {
+    text-decoration: none;
+    color: inherit;
+    transition: color var(--transition-fast);
+  }
+  
+  ul {
+    list-style: none;
+  }
+  
+  /* کلاس نگهدارنده مرکزی (Container) */
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+  }
+  
+  /* کلاس‌های عناوین بخش‌ها */
+  .section-title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    margin-bottom: var(--space-lg);
+    color: var(--color-text-main);
+    position: relative;
+    padding-right: var(--space-sm);
+  }
+  
+  /* یک خط آبی کوچک کنار عناوین برای زیبایی UI */
+  .section-title::before {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 10%;
+    height: 80%;
+    width: 4px;
+    background-color: var(--color-primary);
+    border-radius: var(--radius-sm);
+  }
+  
+  /* سیستم گرید منعطف برای لیست محصولات و دسته‌بندی‌ها */
+  .grid-container {
+    display: grid;
+    gap: var(--space-lg);
+    /* این خط به طور خودکار ستون‌ها را بر اساس عرض صفحه می‌چیند (بدون نیاز به مدیا کوئری‌های زیاد) */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  
+  /* استایل‌های بخش هیرو (Hero Section) که در index.html نوشتیم */
+  .hero-section {
+    background-color: var(--color-surface);
+    padding: var(--space-2xl) 0;
+    text-align: center;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--space-xl);
+  }
+  
+  .hero-title {
+    font-size: var(--font-size-2xl);
+    color: var(--color-primary);
+    margin-bottom: var(--space-sm);
+    font-weight: 800;
+  }
+  
+  .hero-subtitle {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xl);
+  }
+  
+  /* فاصله بین بخش‌های مختلف سایت */
+  section {
+    margin-bottom: var(--space-2xl);
+  }
