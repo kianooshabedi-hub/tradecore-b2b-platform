@@ -1,50 +1,43 @@
 /* css/components.css */
 
+/* css/components.css */
+
 /* =========================================
-   1. دکمه‌ها (Buttons)
+   ۱. دکمه‌ها (Buttons) - یکپارچه و تمام آبی
    ========================================= */
-   .btn {
+   .btn, .btn-primary, .btn-accent, .btn-outline {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: var(--space-sm) var(--space-lg);
-    font-family: inherit;
+    /* 🔴 قفل کردن فونت دکمه‌ها روی وزیرمتن 🔴 */
+    font-family: 'Vazir', sans-serif !important;
     font-size: var(--font-size-sm);
-    font-weight: 600;
-    border: none;
+    font-weight: 600 !important;
+    border: 1px solid var(--color-primary) !important;
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-normal);
     text-align: center;
+    background-color: var(--color-primary) !important;
+    color: #ffffff !important;
+    box-shadow: var(--shadow-sm);
   }
-  
+    
   .btn-full {
     width: 100%;
   }
-  
-  .btn-primary {
-    background-color: var(--color-primary);
-    color: #ffffff;
-    box-shadow: var(--shadow-sm);
-  }
-  
-  .btn-primary:hover {
-    background-color: var(--color-primary-hover);
+    
+  .btn:hover, .btn-primary:hover, .btn-accent:hover, .btn-outline:hover {
+    background-color: var(--color-primary-hover) !important;
+    border-color: var(--color-primary-hover) !important;
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
-  }
-  
-  /* برای دکمه‌های استعلام قیمت (RFQ) که نیاز به توجه بیشتری دارند */
-  .btn-accent {
-    background-color: var(--color-secondary);
-    color: #ffffff;
-  }
-  .btn-accent:hover {
-    background-color: var(--color-secondary-hover);
+    color: #ffffff !important;
   }
   
   /* =========================================
-     2. کارت‌های دسته‌بندی (Category Cards)
+     ۲. کارت‌های دسته‌بندی (Category Cards)
      ========================================= */
   .category-card {
     display: flex;
@@ -57,13 +50,13 @@
     transition: all var(--transition-normal);
     gap: var(--space-md);
   }
-  
+    
   .category-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-md);
     border-color: var(--color-primary);
   }
-  
+    
   .category-icon {
     font-size: 2.5rem;
     background-color: var(--color-background);
@@ -76,31 +69,31 @@
     flex-shrink: 0;
     transition: transform var(--transition-normal);
   }
-  
+    
   .category-card:hover .category-icon {
     transform: scale(1.1);
   }
-  
+    
   .category-info {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
   }
-  
+    
   .category-name {
     font-size: var(--font-size-md);
     font-weight: 700;
     color: var(--color-text-main);
   }
-  
+    
   .category-desc {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
     line-height: 1.4;
   }
-  
+    
   /* =========================================
-     3. کارت‌های محصول (Product Cards)
+     ۳. کارت‌های محصول (Product Cards)
      ========================================= */
   .product-card {
     display: flex;
@@ -108,18 +101,17 @@
     background-color: var(--color-surface);
     border-radius: var(--radius-lg);
     border: 1px solid var(--color-border);
-    overflow: hidden; /* تا عکس از گوشه‌های گرد بیرون نزند */
+    overflow: hidden; 
     box-shadow: var(--shadow-sm);
     transition: all var(--transition-normal);
-    height: 100%; /* هم‌اندازه شدن کارت‌ها در Grid */
+    height: 100%; 
   }
-  
+    
   .product-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-lg);
   }
-  
-  /* بخش تصویر محصول */
+    
   .product-image-wrapper {
     position: relative;
     width: 100%;
@@ -127,19 +119,18 @@
     overflow: hidden;
     background-color: #f9fafb;
   }
-  
+    
   .product-image {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* جلوگیری از دفرمه شدن عکس */
+    object-fit: cover; 
     transition: transform 0.5s ease;
   }
-  
+    
   .product-card:hover .product-image {
-    transform: scale(1.05); /* زوم ملایم روی عکس در حالت هاور */
+    transform: scale(1.05); 
   }
-  
-  /* برچسب (Badge) دسته‌بندی روی عکس */
+    
   .product-badge {
     position: absolute;
     top: var(--space-sm);
@@ -150,41 +141,37 @@
     font-size: 0.7rem;
     font-weight: 600;
     border-radius: var(--radius-sm);
-    backdrop-filter: blur(4px); /* افکت شیشه‌ای مدرن */
+    backdrop-filter: blur(4px); 
   }
-  
-  /* جزئیات محصول (متن‌ها) */
+    
   .product-details {
     padding: var(--space-md);
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* باعث میشه بخش دکمه همیشه بیفته پایین کارت */
+    flex-grow: 1; 
     gap: var(--space-sm);
   }
-  
+    
   .product-title {
     font-size: var(--font-size-md);
     font-weight: 700;
     color: var(--color-text-main);
-    /* محدود کردن عنوان به یک خط و نمایش ... */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+    
   .product-desc {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     line-height: 1.5;
-    /* محدود کردن توضیحات به دو خط */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     flex-grow: 1;
   }
-  
-  /* متادیتا (کشور و قیمت) */
+    
   .product-meta {
     display: flex;
     justify-content: space-between;
@@ -193,140 +180,127 @@
     padding-top: var(--space-sm);
     border-top: 1px dashed var(--color-border);
   }
-  
+    
   .product-country {
     font-size: var(--font-size-xs);
     color: var(--color-text-muted);
     font-weight: 500;
   }
-  
+    
   .product-price {
     font-size: var(--font-size-sm);
     font-weight: 700;
     color: var(--color-text-main);
   }
-  
-  /* استایل مخصوص برای محصولاتی که نیاز به RFQ دارند */
+    
   .price-rfq {
     color: var(--color-secondary);
     font-size: var(--font-size-xs);
-    background-color: #fffbeb; /* پس‌زمینه زرد خیلی روشن */
+    background-color: #fffbeb; 
     padding: 2px 6px;
     border-radius: var(--radius-sm);
   }
-  
-  /* بخش اکشن‌ها (دکمه پایین کارت) */
+    
   .product-actions {
     padding: 0 var(--space-md) var(--space-md) var(--space-md);
   }
-
+  
   /* =========================================
-   4. استایل‌های Header
-   ========================================= */
-#app-header {
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-}
-
-.header-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 80px;
-}
-
-.logo a {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--color-primary);
-}
-
-.text-accent {
-  color: var(--color-secondary);
-}
-
-.main-nav ul {
-  display: flex;
-  gap: var(--space-lg);
-}
-
-.main-nav a {
-  font-weight: 600;
-  color: var(--color-text-main);
-}
-
-.main-nav a:hover {
-  color: var(--color-primary);
-}
-
-.header-actions {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-/* دکمه توخالی (Outline) برای هدر */
-.btn-outline {
-  background-color: transparent;
-  color: var(--color-primary);
-  border: 1px solid var(--color-primary);
-}
-
-.btn-outline:hover {
-  background-color: var(--color-primary);
-  color: #fff;
-}
-
-/* =========================================
-   5. استایل‌های Footer
-   ========================================= */
-#app-footer {
-  background-color: #111827; /* رنگ تیره حرفه‌ای برای فوتر B2B */
-  color: #d1d5db;
-  padding-top: var(--space-2xl);
-  margin-top: auto;
-}
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: var(--space-xl);
-  margin-bottom: var(--space-xl);
-}
-
-.footer-about h3, .footer-links h4, .footer-contact h4 {
-  color: #fff;
-  margin-bottom: var(--space-md);
-}
-
-.footer-links ul {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.footer-links a:hover {
-  color: var(--color-secondary);
-}
-
-.footer-contact p {
-  margin-bottom: var(--space-sm);
-}
-
-.footer-bottom {
-  text-align: center;
-  padding: var(--space-md) 0;
-  border-top: 1px solid #374151;
-  font-size: var(--font-size-sm);
-}
-
-/* =========================================
-   6. استایل‌های جستجوی اصلی (Hero Search)
-   ========================================= */
-   .hero-search-form {
+     ۴. استایل‌های Header
+     ========================================= */
+  #app-header {
+    background-color: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  }
+  
+  .header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+  }
+  
+  .logo a {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-primary);
+  }
+  
+  .text-accent {
+    color: var(--color-secondary);
+  }
+  
+  .main-nav ul {
+    display: flex;
+    gap: var(--space-lg);
+  }
+  
+  .main-nav a {
+    font-weight: 600;
+    color: var(--color-text-main);
+  }
+  
+  .main-nav a:hover {
+    color: var(--color-primary);
+  }
+  
+  .header-actions {
+    display: flex;
+    gap: var(--space-sm);
+  }
+  /* کدهای مخرب .btn-outline هدر از اینجا پاک شد! */
+  
+  /* =========================================
+     ۵. استایل‌های Footer
+     ========================================= */
+  #app-footer {
+    background-color: #111827; 
+    color: #d1d5db;
+    padding-top: var(--space-2xl);
+    margin-top: auto;
+  }
+  
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-xl);
+  }
+  
+  .footer-about h3, .footer-links h4, .footer-contact h4 {
+    color: #fff;
+    margin-bottom: var(--space-md);
+  }
+  
+  .footer-links ul {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+  
+  .footer-links a:hover {
+    color: var(--color-secondary);
+  }
+  
+  .footer-contact p {
+    margin-bottom: var(--space-sm);
+  }
+  
+  .footer-bottom {
+    text-align: center;
+    padding: var(--space-md) 0;
+    border-top: 1px solid #374151;
+    font-size: var(--font-size-sm);
+  }
+  
+  /* =========================================
+     ۶. استایل‌های جستجوی اصلی (Hero Search)
+     ========================================= */
+  .hero-search-form {
     display: flex;
     max-width: 800px;
     margin: 0 auto;
@@ -337,12 +311,12 @@
     border: 1px solid var(--color-border);
     transition: box-shadow var(--transition-normal);
   }
-  
+    
   .hero-search-form:focus-within {
-    box-shadow: 0 15px 35px rgba(30, 64, 175, 0.15); /* هاله آبی ملایم هنگام فوکوس */
+    box-shadow: 0 15px 35px rgba(30, 64, 175, 0.15); 
     border-color: var(--color-primary);
   }
-  
+    
   .search-input {
     flex-grow: 1;
     border: none;
@@ -353,19 +327,18 @@
     background: transparent;
     outline: none;
   }
-  
+    
   .search-input::placeholder {
     color: #9ca3af;
   }
-  
+    
   .btn-search {
     padding: var(--space-md) var(--space-xl);
     font-size: var(--font-size-md);
     border-radius: var(--radius-md);
     white-space: nowrap;
   }
-  
-  /* واکنش‌گرایی برای موبایل */
+    
   @media (max-width: 768px) {
     .hero-search-form {
       flex-direction: column;
@@ -376,81 +349,80 @@
       margin-top: var(--space-sm);
     }
   }
-
+  
   /* =========================================
-   7. استایل‌های صفحه جزئیات محصول (Product Detail)
-   ========================================= */
-.product-detail-grid {
-  display: grid;
-  grid-template-columns: 1.5fr 2fr 1fr; /* سه ستون: عکس، توضیحات، شرکت */
-  gap: var(--space-xl);
-  align-items: start;
-}
-
-.product-gallery {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  padding: var(--space-sm);
-}
-
-.main-product-img {
-  width: 100%;
-  height: auto;
-  border-radius: var(--radius-md);
-  display: block;
-}
-
-.product-title-large {
-  font-size: 2rem;
-  color: var(--color-primary);
-  margin-bottom: var(--space-md);
-  font-weight: 800;
-}
-
-.product-desc-large {
-  font-size: 1.1rem;
-  color: var(--color-text-muted);
-  line-height: 1.8;
-  margin-bottom: var(--space-lg);
-}
-
-.meta-box {
-  background-color: var(--color-background);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border: 1px dashed var(--color-border);
-}
-
-.meta-box p {
-  margin-bottom: 0.5rem;
-}
-
-.supplier-info-card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  padding: var(--space-lg);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  position: sticky; /* با اسکرول کردن صفحه، این کارت ثابت می‌ماند */
-  top: 100px;
-}
-
-/* واکنش‌گرایی (موبایل و تبلت) */
-@media (max-width: 992px) {
+     ۷. صفحه جزئیات محصول و بقیه بخش‌ها
+     ========================================= */
   .product-detail-grid {
-    grid-template-columns: 1fr; /* در موبایل همه زیر هم قرار می‌گیرند */
+    display: grid;
+    grid-template-columns: 1.5fr 2fr 1fr; 
+    gap: var(--space-xl);
+    align-items: start;
   }
+  
+  .product-gallery {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    padding: var(--space-sm);
+  }
+  
+  .main-product-img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+    display: block;
+  }
+  
+  .product-title-large {
+    font-size: 2rem;
+    color: var(--color-primary);
+    margin-bottom: var(--space-md);
+    font-weight: 800;
+  }
+  
+  .product-desc-large {
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+    line-height: 1.8;
+    margin-bottom: var(--space-lg);
+  }
+  
+  .meta-box {
+    background-color: var(--color-background);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--color-border);
+  }
+  
+  .meta-box p {
+    margin-bottom: 0.5rem;
+  }
+  
   .supplier-info-card {
-    position: static;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    position: sticky; 
+    top: 100px;
   }
-}
-
-/* =========================================
-   8. استایل‌های پروفایل شرکت (Business Profile)
-   ========================================= */
-   .business-header-card {
+  
+  @media (max-width: 992px) {
+    .product-detail-grid {
+      grid-template-columns: 1fr; 
+    }
+    .supplier-info-card {
+      position: static;
+    }
+  }
+  
+  /* =========================================
+     ۸. پروفایل شرکت (Business Profile)
+     ========================================= */
+  .business-header-card {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
     gap: var(--space-xl);
@@ -461,7 +433,7 @@
     align-items: center;
     box-shadow: var(--shadow-sm);
   }
-  
+    
   .business-brand-section {
     display: flex;
     flex-direction: column;
@@ -470,7 +442,7 @@
     border-left: 1px dashed var(--color-border);
     padding-left: var(--space-xl);
   }
-  
+    
   .business-logo-large {
     width: 120px;
     height: 120px;
@@ -479,17 +451,16 @@
     object-fit: cover;
     margin-bottom: var(--space-md);
   }
-  
+    
   .business-details-section p {
     margin-bottom: 0.5rem;
   }
-  
+    
   .business-contact-section {
     border-right: 1px dashed var(--color-border);
     padding-right: var(--space-xl);
   }
-  
-  /* واکنش‌گرایی برای پروفایل شرکت */
+    
   @media (max-width: 992px) {
     .business-header-card {
       grid-template-columns: 1fr;
@@ -507,17 +478,17 @@
       padding-top: var(--space-lg);
     }
   }
-
-/* =========================================
-   9. استایل‌های پنل کاربری (Dashboard Layout)
-   ========================================= */
-   .panel-body {
+  
+  /* =========================================
+     ۹. پنل کاربری (Dashboard Layout)
+     ========================================= */
+  .panel-body {
     background-color: #f8fafc;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
   }
-  
+    
   .panel-header {
     display: flex;
     justify-content: space-between;
@@ -530,7 +501,7 @@
     top: 0;
     z-index: 50;
   }
-  
+    
   .panel-user-info {
     font-weight: 600;
     color: var(--color-text-main);
@@ -539,12 +510,12 @@
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
   }
-  
+    
   .panel-layout {
     display: flex;
     flex: 1;
   }
-  
+    
   .panel-sidebar {
     width: 260px;
     background-color: var(--color-surface);
@@ -553,12 +524,12 @@
     flex-direction: column;
     padding: var(--space-md) 0;
   }
-  
+    
   .panel-nav ul {
     display: flex;
     flex-direction: column;
   }
-  
+    
   .panel-nav a {
     display: block;
     padding: var(--space-md) var(--space-lg);
@@ -566,39 +537,38 @@
     font-weight: 500;
     border-right: 3px solid transparent;
   }
-  
+    
   .panel-nav a:hover {
     background-color: #f3f4f6;
     color: var(--color-primary);
   }
-  
+    
   .panel-nav a.active {
     background-color: #eff6ff;
     color: var(--color-primary);
     border-right-color: var(--color-primary);
     font-weight: 700;
   }
-  
+    
   .panel-logout {
-    margin-top: auto; /* هُل دادن دکمه خروج به پایین سایدبار */
+    margin-top: auto; 
     padding: var(--space-md) var(--space-lg);
     border-top: 1px solid var(--color-border);
   }
-  
+    
   .panel-main {
     flex: 1;
     padding: var(--space-xl);
     overflow-y: auto;
   }
-  
-  /* کارت‌های آماری پنل */
+    
   .panel-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--space-lg);
     margin-bottom: var(--space-2xl);
   }
-  
+    
   .stat-card {
     background-color: var(--color-surface);
     padding: var(--space-lg);
@@ -606,19 +576,18 @@
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm);
   }
-  
+    
   .stat-card h3 {
     font-size: var(--font-size-sm);
     color: var(--color-text-muted);
     margin-bottom: var(--space-sm);
   }
-  
+    
   .stat-value {
     font-size: 2.5rem;
     font-weight: 800;
   }
-  
-  /* جدول پنل */
+    
   .panel-table-container {
     background-color: var(--color-surface);
     border-radius: var(--radius-lg);
@@ -626,25 +595,25 @@
     padding: var(--space-lg);
     box-shadow: var(--shadow-sm);
   }
-  
+    
   .panel-table {
     width: 100%;
     border-collapse: collapse;
   }
-  
+    
   .panel-table th, .panel-table td {
     padding: var(--space-md);
     text-align: right;
     border-bottom: 1px solid var(--color-border);
   }
-  
+    
   .panel-table th {
     background-color: #f9fafb;
     font-weight: 600;
     color: var(--color-text-muted);
     font-size: var(--font-size-sm);
   }
-  
+    
   .status-badge {
     padding: 4px 8px;
     border-radius: 999px;
@@ -653,17 +622,17 @@
   }
   .status-pending { background-color: #fef3c7; color: #d97706; }
   .status-replied { background-color: #d1fae5; color: #059669; }
-
-/* =========================================
-   10. استایل‌های پاپ‌آپ (Modal) و فرم‌ها
-   ========================================= */
-   .modal-overlay {
+  
+  /* =========================================
+     ۱۰. استایل‌های پاپ‌آپ (Modal) و فرم‌ها
+     ========================================= */
+  .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* بک‌گراند تاریک نیمه‌شفاف */
+    background-color: rgba(0, 0, 0, 0.5); 
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -671,7 +640,7 @@
     z-index: 1000;
     animation: fadeIn 0.2s ease-out;
   }
-  
+    
   .modal-content {
     background-color: var(--color-surface);
     width: 90%;
@@ -681,7 +650,7 @@
     overflow: hidden;
     animation: slideUp 0.3s ease-out;
   }
-  
+    
   .modal-header {
     display: flex;
     justify-content: space-between;
@@ -690,12 +659,12 @@
     border-bottom: 1px solid var(--color-border);
     background-color: #f9fafb;
   }
-  
+    
   .modal-header h3 {
     font-size: 1.1rem;
     color: var(--color-text-main);
   }
-  
+    
   .btn-close {
     background: none;
     border: none;
@@ -703,15 +672,15 @@
     cursor: pointer;
     color: var(--color-text-muted);
   }
-  
+    
   .btn-close:hover {
     color: red;
   }
-  
+    
   .modal-body {
     padding: var(--space-lg);
   }
-  
+    
   .form-input {
     width: 100%;
     padding: var(--space-md);
@@ -721,19 +690,19 @@
     font-size: var(--font-size-md);
     outline: none;
     transition: border-color 0.2s;
-    resize: vertical; /* اجازه تغییر ارتفاع تکست‌اریا */
+    resize: vertical; 
   }
-  
+    
   .form-input:focus {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
   }
-  
+    
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  
+    
   @keyframes slideUp {
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }

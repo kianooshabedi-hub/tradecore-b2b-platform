@@ -38,8 +38,37 @@ async function initBuyerPanel() {
 
 function loadDashboardTab() {
   const content = document.getElementById('panel-content');
+  const profileStatus = AppStore.getProfileCompletionStatus(); // دریافت درصد تکمیل
+
+  // تولید لیست کارهای ناقص
+  const tasksHtml = profileStatus.missingTasks.length > 0 
+    ? `<ul style="margin-top: 10px; font-size: 0.85rem; color: #ef4444; padding-right: 20px;">
+        ${profileStatus.missingTasks.map(task => `<li>${task}</li>`).join('')}
+       </ul>`
+    : `<p style="margin-top: 10px; font-size: 0.9rem; color: #10b981;">🎉 پروفایل شما کامل است!</p>`;
+
   content.innerHTML = `
     <h1 style="font-size: 1.8rem; margin-bottom: 1.5rem;">خلاصه فعالیت‌های خرید شما</h1>
+    
+    <!-- 🌟 ویجت جدید درصد تکمیل پروفایل -->
+    <div style="background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+      <div style="flex-shrink: 0; text-align: center;">
+        <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--color-primary) ${profileStatus.percentage}%, #e2e8f0 0); display: flex; align-items: center; justify-content: center;">
+          <div style="width: 65px; height: 65px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: var(--color-primary);">
+            ${profileStatus.percentage}%
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-bottom: 5px;">وضعیت تکمیل پروفایل شرکت</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem;">برای دسترسی بهتر به امکانات و اعتمادسازی، پروفایل خود را کامل کنید.</p>
+        ${tasksHtml}
+      </div>
+      <div style="margin-right: auto;">
+        <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\\'settings\\']').click()">تکمیل پروفایل</button>
+      </div>
+    </div>
+
     <div class="panel-stats-grid">
       <div class="stat-card">
         <h3>درخواست‌های ارسالی (RFQ)</h3>
@@ -149,21 +178,144 @@ async function loadFavoritesTab(type) {
   }
 }
 
+// توابع سراسری برای مدیریت فرم چندمرحله‌ای
+window.currentProfileStep = 1;
+
+window.showProfileStep = (step) => {
+  // پنهان کردن تمام مراحل
+  document.querySelectorAll('.profile-step-content').forEach(el => el.style.display = 'none');
+  // نمایش مرحله فعلی
+  document.getElementById(`step-${step}`).style.display = 'block';
+
+  // آپدیت کردن ظاهر نوار پیشرفت (Progress Bar)
+  document.querySelectorAll('.step-indicator').forEach((el, index) => {
+    if (index + 1 < step) {
+      el.className = 'step-indicator step-completed';
+      el.innerHTML = `✔️ ${el.dataset.title}`;
+    } else if (index + 1 === step) {
+      el.className = 'step-indicator step-active';
+      el.innerHTML = `⚙️ ${el.dataset.title}`;
+    } else {
+      el.className = 'step-indicator step-pending';
+      el.innerHTML = `⏳ ${el.dataset.title}`;
+    }
+  });
+  window.currentProfileStep = step;
+};
+
+window.nextProfileStep = () => {
+  if(window.currentProfileStep < 3) window.showProfileStep(window.currentProfileStep + 1);
+};
+window.prevProfileStep = () => {
+  if(window.currentProfileStep > 1) window.showProfileStep(window.currentProfileStep - 1);
+};
+
+// 🌟 تابع جدید و ارتقا یافته لود پروفایل
 function loadProfileTab() {
   const content = document.getElementById('panel-content');
-  content.innerHTML = `
-    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">⚙️ تنظیمات پروفایل شرکت</h2>
-    <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--color-border); max-width: 800px;">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-        <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام شرکت</label><input type="text" class="form-input" value="${currentProfile.name}"></div>
-        <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام انگلیسی (Brand)</label><input type="text" class="form-input" value="${currentProfile.englishName || ''}"></div>
-        <div><label style="font-weight: 600; display:block; margin-bottom:5px;">ایمیل سازمانی</label><input type="email" class="form-input" value="${currentProfile.email || ''}"></div>
-        <div><label style="font-weight: 600; display:block; margin-bottom:5px;">شماره تماس</label><input type="text" class="form-input" value="${currentProfile.phone || ''}" dir="ltr"></div>
-        <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">درباره شرکت (معرفی)</label><textarea class="form-input" rows="5">${currentProfile.description || ''}</textarea></div>
+  
+  // بررسی نقش‌های فعلی کاربر از دیتابیس
+  const roles = currentProfile.roles || ['buyer', 'supplier'];
+  const isBuyer = roles.includes('buyer') ? 'checked' : '';
+  const isSupplier = roles.includes('supplier') ? 'checked' : '';
+
+  // استایل‌های اختصاصی فرم چندمرحله‌ای
+  const style = `
+    <style>
+      .step-container { display: flex; justify-content: space-between; margin-bottom: 2rem; background: var(--color-surface); padding: 10px; border-radius: 8px; border: 1px solid var(--color-border); }
+      .step-indicator { flex: 1; text-align: center; padding: 10px; font-weight: 600; font-size: 0.9rem; transition: 0.3s; color: #94a3b8; border-bottom: 3px solid transparent; }
+      .step-active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+      .step-completed { color: #10b981; border-bottom-color: #10b981; }
+      .profile-step-content { display: none; animation: fadeIn 0.4s ease-in-out; }
+      .checkbox-group { display: flex; gap: 15px; margin-top: 5px; }
+      .checkbox-card { border: 1px solid var(--color-border); padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
+      .checkbox-card:hover { border-color: var(--color-primary); background: #f8fafc; }
+      @keyframes fadeIn { from {opacity: 0; transform: translateY(5px);} to {opacity: 1; transform: translateY(0);} }
+    </style>
+  `;
+
+  content.innerHTML = style + `
+    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">⚙️ تکمیل پروفایل جامع شرکت</h2>
+    
+    <!-- نوار پیشرفت مراحل -->
+    <div class="step-container">
+      <div class="step-indicator" data-title="اطلاعات پایه">اطلاعات پایه</div>
+      <div class="step-indicator" data-title="تماس و آدرس">تماس و آدرس</div>
+      <div class="step-indicator" data-title="فعالیت و نقش‌ها">فعالیت و نقش‌ها</div>
+    </div>
+
+    <div style="background: white; padding: 2.5rem; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+      
+      <!-- 🟢 مرحله اول: اطلاعات پایه -->
+      <div id="step-1" class="profile-step-content">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۱. اطلاعات هویتی شرکت</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام رسمی شرکت *</label><input type="text" class="form-input" value="${currentProfile.name || ''}"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام انگلیسی (برای صادرات)</label><input type="text" class="form-input" value="${currentProfile.englishName || ''}"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام تجاری (Brand)</label><input type="text" class="form-input" value="${currentProfile.brand || ''}"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">سال تأسیس</label><input type="number" class="form-input" value="${currentProfile.foundedYear || ''}"></div>
+          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">معرفی کامل شرکت (درباره ما)</label><textarea class="form-input" rows="4" placeholder="شرکت ما از سال...">${currentProfile.description || ''}</textarea></div>
+          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">لوگوی شرکت</label><button class="btn btn-outline" style="width: 200px;">📸 آپلود تصویر جدید</button></div>
+        </div>
+        <div style="text-align: left; margin-top: 2rem;">
+          <button class="btn btn-primary" style="padding: 10px 30px;" onclick="nextProfileStep()">مرحله بعد ➔</button>
+        </div>
       </div>
-      <button class="btn btn-primary" style="margin-top: 2rem; width: 200px;">ذخیره تغییرات</button>
+
+      <!-- 🟢 مرحله دوم: تماس و آدرس -->
+      <div id="step-2" class="profile-step-content">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۲. اطلاعات ارتباطی و موقعیت</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کشور</label><input type="text" class="form-input" value="${currentProfile.country || 'ایران'}"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">استان / شهر</label><input type="text" class="form-input" value="${currentProfile.city || ''}"></div>
+          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">آدرس دقیق</label><input type="text" class="form-input" value="${currentProfile.address || ''}"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">ایمیل سازمانی</label><input type="email" class="form-input" value="${currentProfile.email || ''}"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">تلفن ثابت (با کد)</label><input type="text" class="form-input" value="${currentProfile.phone || ''}" dir="ltr"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">وب‌سایت</label><input type="url" class="form-input" value="${currentProfile.website || ''}" dir="ltr" placeholder="https://"></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">واتساپ شرکت</label><input type="text" class="form-input" value="${currentProfile.contact?.whatsapp || ''}" dir="ltr"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="prevProfileStep()">🡨 مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 30px;" onclick="nextProfileStep()">مرحله بعد ➔</button>
+        </div>
+      </div>
+
+      <!-- 🟢 مرحله سوم: نوع فعالیت و نقش‌ها -->
+      <div id="step-3" class="profile-step-content">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۳. نوع فعالیت و دسترسی‌ها</h3>
+        
+        <div style="margin-bottom: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px dashed var(--color-primary);">
+          <label style="font-weight: bold; font-size: 1.1rem; display:block; margin-bottom:10px; color: var(--color-primary);">قابلیت‌های حساب کاربری (نقش‌ها)</label>
+          <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 15px;">با انتخاب هر دو گزینه، با یک ورود به هر دو پنل خریدار و تأمین‌کننده دسترسی خواهید داشت.</p>
+          <div class="checkbox-group">
+            <label class="checkbox-card"><input type="checkbox" id="role-buyer" ${isBuyer}> من یک خریدار هستم (ارسال RFQ)</label>
+            <label class="checkbox-card"><input type="checkbox" id="role-supplier" ${isSupplier}> من یک تأمین‌کننده هستم (فروش محصول)</label>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+          <div>
+            <label style="font-weight: 600; display:block; margin-bottom:10px;">نوع فعالیت شرکت (امکان انتخاب چند مورد)</label>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox" checked> تولیدکننده</label>
+              <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> تأمین‌کننده / عمده‌فروش</label>
+              <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> صادرکننده / واردکننده</label>
+              <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> شرکت بازرگانی</label>
+            </div>
+          </div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">صنعت اصلی فعالیت</label><input type="text" class="form-input" value="${currentProfile.industry || ''}"></div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="prevProfileStep()">🡨 مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 40px; background: #10b981; border-color: #10b981;" onclick="alert('پروفایل شرکت و دسترسی‌های شما با موفقیت ذخیره شد!')">✔️ ذخیره نهایی پروفایل</button>
+        </div>
+      </div>
     </div>
   `;
+
+  // راه‌اندازی اولیه و نمایش گام ۱
+  setTimeout(() => window.showProfileStep(1), 0);
 }
 
 // این همون تابعیه که جا مونده بود!

@@ -7,6 +7,18 @@ const RFQ_KEY = 'tradecore_rfqs';
 const FAV_PROD_KEY = 'tc_fav_prods';
 const FAV_BIZ_KEY = 'tc_fav_biz';
 
+// 🌟 ارتقای ساختار داده‌های نمایشی برای پشتیبانی از معماری جدید
+// در نسخه واقعی، این تغییرات روی دیتابیس اعمال می‌شود
+businesses.forEach(biz => {
+    // اگر شرکتی نقش نداشت، پیش‌فرض هم خریدار و هم تامین‌کننده باشد
+    if (!biz.roles) biz.roles = ['buyer', 'supplier'];
+    
+    // تفکیک اطلاعات طبق معماری جدید (اگر از قبل نداشتند)
+    if (!biz.buyerProfile) biz.buyerProfile = { neededCategories: [], preferredCountries: [] };
+    if (!biz.supplierProfile) biz.supplierProfile = { suppliedCategories: [], certifications: [], leadTime: '' };
+    if (!biz.contact) biz.contact = { email: biz.email || '', phone: biz.phone || '', whatsapp: '', contactPerson: '' };
+});
+
 export const AppStore = {
   getActiveUserId: () => localStorage.getItem(USER_KEY) || 'biz-1',
   
@@ -17,6 +29,39 @@ export const AppStore = {
     return businesses.find(b => b.id === id);
   },
   
+  // 🌟 منطق جدید: محاسبه درصد تکمیل پروفایل شرکت
+  getProfileCompletionStatus: () => {
+    const profile = AppStore.getActiveUserProfile();
+    if (!profile) return { percentage: 0, missingTasks: [] };
+
+    let score = 0;
+    const totalFields = 6;
+    const missingTasks = [];
+
+    if (profile.name) score++; 
+    else missingTasks.push('ثبت نام رسمی شرکت');
+
+    if (profile.logo && !profile.logo.includes('default')) score++; 
+    else missingTasks.push('آپلود لوگوی شرکت');
+
+    if (profile.description) score++; 
+    else missingTasks.push('نوشتن معرفی شرکت (درباره ما)');
+
+    if (profile.contact && profile.contact.phone) score++; 
+    else missingTasks.push('ثبت شماره تماس شرکت');
+
+    if (profile.industry) score++; 
+    else missingTasks.push('انتخاب صنعت و حوزه فعالیت');
+
+    // بررسی ثبت حداقل یک محصول برای تامین‌کنندگان
+    const hasProducts = true; // در آینده از ProductService.getProductsBySupplierId چک می‌شود
+    if (profile.roles.includes('supplier') && hasProducts) score++;
+    else if (profile.roles.includes('supplier')) missingTasks.push('ثبت اولین محصول');
+
+    const percentage = Math.round((score / totalFields) * 100);
+    return { percentage, missingTasks };
+  },
+
   getAllRfqs: () => JSON.parse(localStorage.getItem(RFQ_KEY) || '[]'),
   
   addRfq: (rfq) => {
@@ -34,7 +79,6 @@ export const AppStore = {
     }
   },
 
-  // --- بخش علاقه‌مندی‌ها ---
   getFavProducts: () => {
     const allFavs = JSON.parse(localStorage.getItem(FAV_PROD_KEY) || '{}');
     return allFavs[AppStore.getActiveUserId()] || [];
@@ -55,7 +99,7 @@ export const AppStore = {
     else allFavs[userId].splice(index, 1);
     
     localStorage.setItem(FAV_PROD_KEY, JSON.stringify(allFavs));
-    return index === -1; // اگر اضافه شد true
+    return index === -1; 
   },
   
   toggleFavBusiness: (bizId) => {

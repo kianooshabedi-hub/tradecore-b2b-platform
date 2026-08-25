@@ -1,29 +1,32 @@
 /* css/variables.css */
 
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.0.0/Vazirmatn-font-face.css');
+
 :root {
     /* پالت رنگی اصلی */
-    --color-primary: #1e40af; /* آبی سازمانی */
+    --color-primary: #1e40af; 
     --color-primary-hover: #1e3a8a;
-    --color-secondary: #f59e0b; /* نارنجی برای اکشن‌های مهم مثل RFQ */
+    --color-secondary: #f59e0b; 
     --color-secondary-hover: #d97706;
   
     /* رنگ‌های پس‌زمینه و متن */
-    --color-background: #f3f4f6; /* خاکستری بسیار روشن برای پس‌زمینه کل سایت */
-    --color-surface: #ffffff; /* سفید برای کارت‌ها، پنل‌ها و مدال‌ها */
-    --color-text-main: #1f2937; /* رنگ متن اصلی (سیاه نرم) */
-    --color-text-muted: #6b7280; /* رنگ متن فرعی و توضیحات */
-    --color-border: #e5e7eb; /* رنگ خطوط دور باکس‌ها */
+    --color-background: #f3f4f6; 
+    --color-surface: #ffffff; 
+    --color-text-main: #1f2937; 
+    --color-text-muted: #6b7280; 
+    --color-border: #e5e7eb; 
   
-    /* سیستم فاصله‌گذاری (Spacing) بر اساس rem */
-    --space-xs: 0.25rem;  /* 4px */
-    --space-sm: 0.5rem;   /* 8px */
-    --space-md: 1rem;     /* 16px */
-    --space-lg: 1.5rem;   /* 24px */
-    --space-xl: 2.5rem;   /* 40px */
-    --space-2xl: 4rem;    /* 64px */
+    /* سیستم فاصله‌گذاری */
+    --space-xs: 0.25rem;  
+    --space-sm: 0.5rem;   
+    --space-md: 1rem;     
+    --space-lg: 1.5rem;   
+    --space-xl: 2.5rem;   
+    --space-2xl: 4rem;    
   
-    /* تایپوگرافی */
-    --font-family-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Tahoma, sans-serif;
+    /* 🔴 فونت فقط و فقط روی وزیرمتن قفل شد 🔴 */
+    --font-family-main: 'Vazir', sans-serif !important;
+    
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-md: 1rem;
@@ -31,7 +34,7 @@
     --font-size-xl: 1.5rem;
     --font-size-2xl: 2rem;
   
-    /* گردی گوشه‌ها و سایه‌ها (برای UI مدرن) */
+    /* گردی گوشه‌ها و سایه‌ها */
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 12px;
@@ -40,7 +43,7 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   
-    /* ترانزیشن‌ها برای انیمیشن‌های روان */
+    /* ترانزیشن‌ها */
     --transition-fast: 0.2s ease-in-out;
     --transition-normal: 0.3s ease-in-out;
-  }
+}

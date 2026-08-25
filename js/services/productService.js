@@ -107,10 +107,43 @@ async function getProductsBySupplierId(supplierId) {
   }
 }
 
+// ۵. تابع دریافت محصولات بر اساس دسته‌بندی خاص (اضافه شده جدید 🌟)
+async function getProductsByCategoryId(categoryId) {
+  try {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // اگر گفت همه محصولات، همه رو برگردون
+    let matchedProducts = products.filter(p => p.status === 'active');
+    
+    // در غیر این صورت فیلتر کن
+    if (categoryId && categoryId !== 'all') {
+      matchedProducts = matchedProducts.filter(p => p.categoryId === categoryId);
+    }
+    
+    const populatedProducts = await Promise.all(matchedProducts.map(async (product) => {
+      const categoryData = await CategoryService.getCategoryById(product.categoryId);
+      const businessData = await BusinessService.getBusinessById(product.supplierId);
+      
+      return {
+        ...product,
+        categoryName: categoryData ? categoryData.name : 'دسته‌بندی نامشخص',
+        supplierName: businessData ? businessData.name : 'تامین‌کننده نامشخص',
+        supplierStatus: businessData ? businessData.status : 'standard'
+      };
+    }));
+
+    return populatedProducts;
+  } catch (error) {
+    console.error("خطا در فیلتر دسته‌بندی:", error);
+    return [];
+  }
+}
+
 // فقط یک‌بار و در انتهای فایل، تمام توابع را با هم Export می‌کنیم:
 export const ProductService = {
   getFeaturedProducts,
   searchProducts,
   getProductById,
-  getProductsBySupplierId
+  getProductsBySupplierId,
+  getProductsByCategoryId // 👈 این خط به خروجی‌ها اضافه شد
 };

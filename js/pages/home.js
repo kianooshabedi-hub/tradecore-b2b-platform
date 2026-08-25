@@ -68,7 +68,7 @@ async function loadCategories() {
     return;
   }
   categoryGrid.innerHTML = categories.map(cat => `
-    <a href="#" class="category-card" data-id="${cat.id}">
+    <a href="products.html?category=${cat.id}" class="category-card" data-id="${cat.id}">
       <div class="category-icon">${cat.icon}</div>
       <div class="category-info">
         <h3 class="category-name">${cat.name}</h3>
