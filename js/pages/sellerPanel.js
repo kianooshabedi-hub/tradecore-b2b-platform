@@ -1,11 +1,12 @@
 // js/pages/sellerPanel.js
-import { AppStore } from '../data/appStore.js'; // 👈 این خط باید اضافه بشه
+
+import { AppStore } from '../data/appStore.js';
 import { SellerService } from '../services/sellerService.js';
 import { ProductService } from '../services/productService.js';
 
 let currentProfile = null;
 let currentSummary = null;
-let currentProductPage = 1; // برای صفحه‌بندی
+let currentProductPage = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
   initSellerPanel();
@@ -13,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function initSellerPanel() {
   currentProfile = await SellerService.getProfile();
-  if (currentProfile) document.getElementById('top-user-name').innerHTML = `🏢 ${currentProfile.name} (تأمین‌کننده)`;
+  if (currentProfile) document.getElementById('top-user-name').innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg> ${currentProfile.name} (تأمین‌کننده)`;
   
   currentSummary = await SellerService.getDashboardSummary();
   loadDashboardTab();
@@ -23,9 +24,10 @@ async function initSellerPanel() {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       navLinks.forEach(l => l.classList.remove('active'));
-      e.target.classList.add('active');
+      const targetLink = e.target.closest('a');
+      if(targetLink) targetLink.classList.add('active');
       
-      const tab = e.target.getAttribute('data-tab');
+      const tab = targetLink ? targetLink.getAttribute('data-tab') : null;
       if (tab === 'dashboard') loadDashboardTab();
       else if (tab === 'inbox') loadInboxTab();
       else if (tab === 'my-products') loadProductsTab();
@@ -42,12 +44,11 @@ function loadDashboardTab() {
     ? `<ul style="margin-top: 10px; font-size: 0.85rem; color: #ef4444; padding-right: 20px;">
         ${profileStatus.missingTasks.map(task => `<li>${task}</li>`).join('')}
        </ul>`
-    : `<p style="margin-top: 10px; font-size: 0.9rem; color: #10b981;">🎉 پروفایل شرکت شما کامل است!</p>`;
+    : `<p style="margin-top: 10px; font-size: 0.9rem; color: #10b981;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> پروفایل شرکت شما کامل است!</p>`;
 
   content.innerHTML = `
     <h1 style="font-size: 1.8rem; margin-bottom: 1.5rem;">خلاصه وضعیت فروشگاه شما</h1>
     
-    <!-- 🌟 ویجت درصد تکمیل پروفایل (مخصوص فروشنده) -->
     <div style="background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
       <div style="flex-shrink: 0; text-align: center;">
         <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--color-primary) ${profileStatus.percentage}%, #e2e8f0 0); display: flex; align-items: center; justify-content: center;">
@@ -62,12 +63,10 @@ function loadDashboardTab() {
         ${tasksHtml}
       </div>
       <div style="margin-right: auto;">
-        <!-- دکمه اتصال به تب پروفایل فروشنده -->
         <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\\'company-profile\\']').click()">تکمیل پروفایل</button>
       </div>
     </div>
 
-    <!-- آمارهای اختصاصی فروشگاه -->
     <div class="panel-stats-grid">
       <div class="stat-card" style="border-bottom: 4px solid var(--color-secondary);">
         <h3>پیام‌های جدید (Leads)</h3>
@@ -84,10 +83,11 @@ function loadDashboardTab() {
     </div>
   `;
 }
+
 function loadInboxTab() {
   const content = document.getElementById('panel-content');
   content.innerHTML = `
-    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">📥 صندوق پیام‌ها (Leads)</h2>
+    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg> صندوق پیام‌ها (Leads)</h2>
     <div class="panel-table-container">
       <table class="panel-table">
         <thead>
@@ -105,7 +105,7 @@ function loadInboxTab() {
               <td style="color: var(--color-primary); font-weight: 600;">${rfq.buyerName}</td>
               <td>${rfq.productName}</td>
               <td style="color: var(--color-text-muted);">${rfq.date}</td>
-              <td><span class="status-badge status-${rfq.status}">${rfq.status === 'pending' ? '🔴 نیاز به پاسخ' : 'پاسخ داده شده'}</span></td>
+              <td><span class="status-badge status-${rfq.status}">${rfq.status === 'pending' ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> نیاز به پاسخ' : 'پاسخ داده شده'}</span></td>
               <td>
                 <button class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="openReplyModal('${rfq.id}')">
                   ${rfq.status === 'pending' ? 'خواندن و پاسخ' : 'مشاهده پاسخ'}
@@ -129,7 +129,6 @@ async function loadProductsTab() {
   content.innerHTML = '<div style="text-align: center; padding: 3rem;">در حال دریافت اطلاعات...</div>';
   const myProducts = await ProductService.getProductsBySupplierId(currentProfile.id);
 
-  // صفحه‌بندی (۱۰ تایی)
   const itemsPerPage = 10;
   const totalPages = Math.ceil(myProducts.length / itemsPerPage);
   const start = (currentProductPage - 1) * itemsPerPage;
@@ -146,8 +145,8 @@ async function loadProductsTab() {
 
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-      <h2 style="font-size: 1.5rem;">📦 مدیریت محصولات (${myProducts.length})</h2>
-      <button class="btn btn-primary" onclick="loadAddProductForm()">+ افزودن محصول جدید</button>
+      <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> مدیریت محصولات (${myProducts.length})</h2>
+      <button class="btn btn-primary" onclick="loadAddProductForm()" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن محصول جدید</button>
     </div>
     <div class="panel-table-container">
       <table class="panel-table">
@@ -166,8 +165,8 @@ async function loadProductsTab() {
               <td style="font-weight: 600;">${p.name}</td>
               <td style="color: var(--color-text-muted);">${p.categoryName || 'دسته‌بندی'}</td>
               <td>
-                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;">✏️ ویرایش</button>
-                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; color: #ef4444; border-color: #ef4444; margin-right: 5px;">🗑️ حذف</button>
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> ویرایش</button>
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; color: #ef4444; border-color: #ef4444; margin-right: 5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> حذف</button>
               </td>
             </tr>
           `).join('')}
@@ -178,26 +177,22 @@ async function loadProductsTab() {
   `;
 }
 
-// توابع سراسری برای مدیریت فرم چندمرحله‌ای
 window.currentProfileStep = 1;
 
 window.showProfileStep = (step) => {
-  // پنهان کردن تمام مراحل
   document.querySelectorAll('.profile-step-content').forEach(el => el.style.display = 'none');
-  // نمایش مرحله فعلی
   document.getElementById(`step-${step}`).style.display = 'block';
 
-  // آپدیت کردن ظاهر نوار پیشرفت (Progress Bar)
   document.querySelectorAll('.step-indicator').forEach((el, index) => {
     if (index + 1 < step) {
       el.className = 'step-indicator step-completed';
-      el.innerHTML = `✔️ ${el.dataset.title}`;
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${el.dataset.title}`;
     } else if (index + 1 === step) {
       el.className = 'step-indicator step-active';
-      el.innerHTML = `⚙️ ${el.dataset.title}`;
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> ${el.dataset.title}`;
     } else {
       el.className = 'step-indicator step-pending';
-      el.innerHTML = `⏳ ${el.dataset.title}`;
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg> ${el.dataset.title}`;
     }
   });
   window.currentProfileStep = step;
@@ -210,16 +205,12 @@ window.prevProfileStep = () => {
   if(window.currentProfileStep > 1) window.showProfileStep(window.currentProfileStep - 1);
 };
 
-// 🌟 تابع جدید و ارتقا یافته لود پروفایل
 function loadProfileTab() {
   const content = document.getElementById('panel-content');
-  
-  // بررسی نقش‌های فعلی کاربر از دیتابیس
   const roles = currentProfile.roles || ['buyer', 'supplier'];
   const isBuyer = roles.includes('buyer') ? 'checked' : '';
   const isSupplier = roles.includes('supplier') ? 'checked' : '';
 
-  // استایل‌های اختصاصی فرم چندمرحله‌ای
   const style = `
     <style>
       .step-container { display: flex; justify-content: space-between; margin-bottom: 2rem; background: var(--color-surface); padding: 10px; border-radius: 8px; border: 1px solid var(--color-border); }
@@ -235,9 +226,8 @@ function loadProfileTab() {
   `;
 
   content.innerHTML = style + `
-    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">⚙️ تکمیل پروفایل جامع شرکت</h2>
+    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> تکمیل پروفایل جامع شرکت</h2>
     
-    <!-- نوار پیشرفت مراحل -->
     <div class="step-container">
       <div class="step-indicator" data-title="اطلاعات پایه">اطلاعات پایه</div>
       <div class="step-indicator" data-title="تماس و آدرس">تماس و آدرس</div>
@@ -246,7 +236,6 @@ function loadProfileTab() {
 
     <div style="background: white; padding: 2.5rem; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
       
-      <!-- 🟢 مرحله اول: اطلاعات پایه -->
       <div id="step-1" class="profile-step-content">
         <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۱. اطلاعات هویتی شرکت</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -255,14 +244,13 @@ function loadProfileTab() {
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام تجاری (Brand)</label><input type="text" class="form-input" value="${currentProfile.brand || ''}"></div>
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">سال تأسیس</label><input type="number" class="form-input" value="${currentProfile.foundedYear || ''}"></div>
           <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">معرفی کامل شرکت (درباره ما)</label><textarea class="form-input" rows="4" placeholder="شرکت ما از سال...">${currentProfile.description || ''}</textarea></div>
-          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">لوگوی شرکت</label><button class="btn btn-outline" style="width: 200px;">📸 آپلود تصویر جدید</button></div>
+          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">لوگوی شرکت</label><button class="btn btn-outline" style="width: 200px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> آپلود تصویر جدید</button></div>
         </div>
         <div style="text-align: left; margin-top: 2rem;">
-          <button class="btn btn-primary" style="padding: 10px 30px;" onclick="nextProfileStep()">مرحله بعد ➔</button>
+          <button class="btn btn-primary" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="nextProfileStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
         </div>
       </div>
 
-      <!-- 🟢 مرحله دوم: تماس و آدرس -->
       <div id="step-2" class="profile-step-content">
         <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۲. اطلاعات ارتباطی و موقعیت</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -275,12 +263,11 @@ function loadProfileTab() {
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">واتساپ شرکت</label><input type="text" class="form-input" value="${currentProfile.contact?.whatsapp || ''}" dir="ltr"></div>
         </div>
         <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="prevProfileStep()">🡨 مرحله قبل</button>
-          <button class="btn btn-primary" style="padding: 10px 30px;" onclick="nextProfileStep()">مرحله بعد ➔</button>
+          <button class="btn btn-outline" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="prevProfileStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="nextProfileStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
         </div>
       </div>
 
-      <!-- 🟢 مرحله سوم: نوع فعالیت و نقش‌ها -->
       <div id="step-3" class="profile-step-content">
         <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۳. نوع فعالیت و دسترسی‌ها</h3>
         
@@ -307,14 +294,13 @@ function loadProfileTab() {
         </div>
 
         <div style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
-          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="prevProfileStep()">🡨 مرحله قبل</button>
-          <button class="btn btn-primary" style="padding: 10px 40px; background: #10b981; border-color: #10b981;" onclick="alert('پروفایل شرکت و دسترسی‌های شما با موفقیت ذخیره شد!')">✔️ ذخیره نهایی پروفایل</button>
+          <button class="btn btn-outline" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="prevProfileStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 40px; background: #10b981; border-color: #10b981; display: inline-flex; align-items: center; gap: 6px;" onclick="alert('پروفایل شرکت و دسترسی‌های شما با موفقیت ذخیره شد!')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ذخیره نهایی پروفایل</button>
         </div>
       </div>
     </div>
   `;
 
-  // راه‌اندازی اولیه و نمایش گام ۱
   setTimeout(() => window.showProfileStep(1), 0);
 }
 
@@ -328,7 +314,7 @@ window.openReplyModal = (rfqId) => {
       <div class="modal-content">
         <div class="modal-header">
           <h3>استعلام از: ${rfq.buyerName}</h3>
-          <button class="btn-close" onclick="document.getElementById('reply-modal').remove()">✖</button>
+          <button class="btn-close" onclick="document.getElementById('reply-modal').remove()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <div class="modal-body">
           <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--color-border);">
@@ -363,10 +349,6 @@ window.submitRfqReply = async (rfqId, event) => {
   loadInboxTab();
 };
 
-// ==========================================
-// 🌟 سیستم فرم چند مرحله‌ای ثبت محصول جدید
-// ==========================================
-
 window.currentProdStep = 1;
 
 window.showProdStep = (step) => {
@@ -376,13 +358,13 @@ window.showProdStep = (step) => {
   document.querySelectorAll('.prod-step-indicator').forEach((el, index) => {
     if (index + 1 < step) {
       el.className = 'step-indicator prod-step-indicator step-completed';
-      el.innerHTML = `✔️ ${el.dataset.title}`;
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${el.dataset.title}`;
     } else if (index + 1 === step) {
       el.className = 'step-indicator prod-step-indicator step-active';
-      el.innerHTML = `📦 ${el.dataset.title}`;
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> ${el.dataset.title}`;
     } else {
       el.className = 'step-indicator prod-step-indicator step-pending';
-      el.innerHTML = `⏳ ${el.dataset.title}`;
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg> ${el.dataset.title}`;
     }
   });
   window.currentProdStep = step;
@@ -391,7 +373,6 @@ window.showProdStep = (step) => {
 window.nextProdStep = () => { if(currentProdStep < 5) showProdStep(currentProdStep + 1); };
 window.prevProdStep = () => { if(currentProdStep > 1) showProdStep(currentProdStep - 1); };
 
-// اضافه کردن سطر داینامیک برای مشخصات فنی
 window.addTechSpecRow = () => {
   const container = document.getElementById('tech-specs-container');
   const row = document.createElement('div');
@@ -399,22 +380,20 @@ window.addTechSpecRow = () => {
   row.innerHTML = `
     <input type="text" class="form-input" placeholder="ویژگی (مثلاً جنس، ولتاژ)" style="flex:1;">
     <input type="text" class="form-input" placeholder="مقدار (مثلاً مس، 220V)" style="flex:2;">
-    <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px;" onclick="this.parentElement.remove()">✖</button>
+    <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px; display: inline-flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
   `;
   container.appendChild(row);
 };
 
-// تابع اصلی رندر کردن فرم محصول
 window.loadAddProductForm = () => {
   const content = document.getElementById('panel-content');
   
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-      <h2 style="font-size: 1.5rem;">📦 ثبت محصول جدید</h2>
-      <button class="btn btn-outline" onclick="loadProductsTab()">✖ انصراف و بازگشت</button>
+      <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> ثبت محصول جدید</h2>
+      <button class="btn btn-outline" onclick="loadProductsTab()" style="display: inline-flex; align-items: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> انصراف و بازگشت</button>
     </div>
     
-    <!-- نوار پیشرفت -->
     <div class="step-container" style="display: flex; justify-content: space-between; margin-bottom: 2rem; background: var(--color-surface); padding: 10px; border-radius: 8px; border: 1px solid var(--color-border);">
       <div class="step-indicator prod-step-indicator" data-title="پایه">پایه</div>
       <div class="step-indicator prod-step-indicator" data-title="توضیحات">توضیحات</div>
@@ -425,7 +404,6 @@ window.loadAddProductForm = () => {
 
     <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
       
-      <!-- 🟢 گام ۱: اطلاعات پایه -->
       <div id="prod-step-1" class="prod-step-content">
         <h3 style="margin-bottom: 1.5rem;">۱. اطلاعات پایه محصول</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -435,12 +413,11 @@ window.loadAddProductForm = () => {
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">برند</label><input type="text" class="form-input"></div>
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کد محصول / مدل</label><input type="text" class="form-input"></div>
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کشور سازنده</label><input type="text" class="form-input" value="ایران"></div>
-          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">تصویر اصلی محصول</label><button class="btn btn-outline" style="width:100%;">📸 انتخاب تصویر</button></div>
+          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">تصویر اصلی محصول</label><button class="btn btn-outline" style="width:100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> انتخاب تصویر</button></div>
         </div>
-        <div style="text-align: left; margin-top: 2rem;"><button class="btn btn-primary" style="padding: 10px 30px;" onclick="nextProdStep()">مرحله بعد ➔</button></div>
+        <div style="text-align: left; margin-top: 2rem;"><button class="btn btn-primary" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>
       </div>
 
-      <!-- 🟢 گام ۲: توضیحات -->
       <div id="prod-step-2" class="prod-step-content">
         <h3 style="margin-bottom: 1.5rem;">۲. توضیحات و معرفی</h3>
         <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
@@ -449,49 +426,45 @@ window.loadAddProductForm = () => {
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کاربردهای اصلی</label><input type="text" class="form-input" placeholder="صنایع سنگین، خودروسازی، ..."></div>
         </div>
         <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" onclick="prevProdStep()">🡨 مرحله قبل</button>
-          <button class="btn btn-primary" onclick="nextProdStep()">مرحله بعد ➔</button>
+          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
+          <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;" onclick="nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
         </div>
       </div>
 
-      <!-- 🟢 گام ۳: مشخصات فنی (داینامیک) -->
       <div id="prod-step-3" class="prod-step-content">
         <h3 style="margin-bottom: 1.5rem;">۳. مشخصات فنی تخصصی</h3>
         <p style="font-size: 0.9rem; color: var(--color-text-muted); margin-bottom: 15px;">ویژگی‌های فنی محصول را بر اساس نوع آن (مثلاً ولتاژ برای تجهیزات برقی یا گرانروی برای روانکارها) اضافه کنید.</p>
         
         <div id="tech-specs-container">
-          <!-- سطرهای مشخصات اینجا اضافه میشن -->
           <div style="display: flex; gap: 10px; margin-bottom: 10px;">
             <input type="text" class="form-input" placeholder="ویژگی (مثلاً جنس)" style="flex:1;">
             <input type="text" class="form-input" placeholder="مقدار (مثلاً مس)" style="flex:2;">
-            <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px;" onclick="this.parentElement.remove()">✖</button>
+            <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px; display: inline-flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
           </div>
         </div>
         
-        <button class="btn btn-outline" style="margin-top: 10px; border-style: dashed; width: 100%;" onclick="addTechSpecRow()">+ افزودن ویژگی جدید</button>
+        <button class="btn btn-outline" style="margin-top: 10px; border-style: dashed; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="addTechSpecRow()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن ویژگی جدید</button>
 
         <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" onclick="prevProdStep()">🡨 مرحله قبل</button>
-          <button class="btn btn-primary" onclick="nextProdStep()">مرحله بعد ➔</button>
+          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
+          <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;" onclick="nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
         </div>
       </div>
 
-      <!-- 🟢 گام ۴: گواهینامه‌ها -->
       <div id="prod-step-4" class="prod-step-content">
         <h3 style="margin-bottom: 1.5rem;">۴. استانداردها و مدارک</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام استاندارد / گواهی</label><input type="text" class="form-input" placeholder="مثال: ISO 9001 یا API SN"></div>
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">سازمان صادرکننده</label><input type="text" class="form-input"></div>
           <div><label style="font-weight: 600; display:block; margin-bottom:5px;">تاریخ انقضا</label><input type="date" class="form-input"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">فایل ضمیمه</label><button class="btn btn-outline" style="width:100%;">📎 آپلود گواهی/کاتالوگ</button></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">فایل ضمیمه</label><button class="btn btn-outline" style="width:100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> آپلود گواهی/کاتالوگ</button></div>
         </div>
         <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" onclick="prevProdStep()">🡨 مرحله قبل</button>
-          <button class="btn btn-primary" onclick="nextProdStep()">مرحله بعد ➔</button>
+          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
+          <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;" onclick="nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
         </div>
       </div>
 
-      <!-- 🟢 گام ۵: اطلاعات تجاری و ثبت -->
       <div id="prod-step-5" class="prod-step-content">
         <h3 style="margin-bottom: 1.5rem;">۵. اطلاعات تجاری</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -503,10 +476,10 @@ window.loadAddProductForm = () => {
         </div>
         
         <div style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
-          <button class="btn btn-outline" onclick="prevProdStep()">🡨 مرحله قبل</button>
+          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
           <div style="display:flex; gap:10px;">
-            <button class="btn btn-outline" onclick="alert('محصول به عنوان پیش‌نویس ذخیره شد.'); loadProductsTab();">💾 ذخیره پیش‌نویس</button>
-            <button class="btn btn-primary" style="background:#10b981; border-color:#10b981;" onclick="alert('محصول با موفقیت در سیستم ثبت و منتشر شد.'); loadProductsTab();">✔️ ثبت و انتشار محصول</button>
+            <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="alert('محصول به عنوان پیش‌نویس ذخیره شد.'); loadProductsTab();"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> ذخیره پیش‌نویس</button>
+            <button class="btn btn-primary" style="background:#10b981; border-color:#10b981; display: inline-flex; align-items: center; gap: 6px;" onclick="alert('محصول با موفقیت در سیستم ثبت و منتشر شد.'); loadProductsTab();"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ثبت و انتشار محصول</button>
           </div>
         </div>
       </div>

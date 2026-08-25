@@ -4,7 +4,6 @@ import { renderHeader } from '../components/header.js';
 import { businesses } from '../data/businesses.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // رندر کردن هدر
     const headerElement = document.querySelector('header') || document.getElementById('main-header');
     if (headerElement) headerElement.innerHTML = renderHeader();
 
@@ -12,8 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderSuppliersPage() {
-    // فیلتر کردن شرکت‌هایی که نقش تأمین‌کننده دارند
     const suppliers = businesses.filter(b => !b.roles || b.roles.includes('supplier'));
+
+    const locIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+    const starIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
 
     const content = `
         <div class="container" style="margin-top: 4rem; margin-bottom: 6rem;">
@@ -30,8 +31,8 @@ function renderSuppliersPage() {
                         <p style="font-size: 0.9rem; color: var(--color-primary); font-weight: 600; margin-bottom: 15px;">${biz.industry || 'صنعت عمومی'}</p>
                         
                         <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 2rem; font-size: 0.85rem; color: #475569;">
-                            <span style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 12px; border-radius: 20px;">📍 ${biz.city || 'ایران'}</span>
-                            <span style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 12px; border-radius: 20px;">⭐ تأیید شده</span>
+                            <span style="display: inline-flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 12px; border-radius: 20px;">${locIcon} ${biz.city || 'ایران'}</span>
+                            <span style="display: inline-flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 12px; border-radius: 20px;">${starIcon} تأیید شده</span>
                         </div>
                         
                         <a href="business.html?id=${biz.id}" class="btn btn-outline btn-full" style="padding: 10px; font-weight: 600; border-color: #cbd5e1;">مشاهده پروفایل و محصولات</a>

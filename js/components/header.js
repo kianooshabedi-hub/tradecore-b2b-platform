@@ -20,8 +20,8 @@ export function renderHeader() {
 
   // 🌟 ساخت لینک‌های دراپ‌داون از روی دیتابیس
   const categoryLinksHtml = categories.filter(c => c.status === 'active').map(cat => `
-    <a href="products.html?category=${cat.id}" style="display: block; padding: 12px 20px; color: #475569; text-decoration: none; font-size: 0.95rem; border-bottom: 1px solid #f1f5f9; transition: 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'; this.style.color='var(--color-primary)'; this.style.paddingRight='25px';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#475569'; this.style.paddingRight='20px';">
-      <span style="margin-left: 8px;">${cat.icon}</span> ${cat.name}
+    <a href="products.html?category=${cat.id}" style="display: flex; align-items: center; padding: 12px 20px; color: #475569; text-decoration: none; font-size: 0.95rem; border-bottom: 1px solid #f1f5f9; transition: 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'; this.style.color='var(--color-primary)'; this.style.paddingRight='25px';" onmouseout="this.style.backgroundColor='transparent'; this.style.color='#475569'; this.style.paddingRight='20px';">
+      <span style="margin-left: 8px; display: inline-flex;">${cat.icon}</span> ${cat.name}
     </a>
   `).join('');
 
@@ -79,7 +79,9 @@ export function renderHeader() {
           <div class="nav-dropdown">
             <a href="products.html?category=all" style="color: #475569; font-weight: 600; font-size: 0.95rem; text-decoration: none; display: flex; align-items: center; gap: 5px;" onmouseover="this.style.color='var(--color-primary)'" onmouseout="this.style.color='#475569'">محصولات ▾</a>
             <div class="dropdown-content">
-              <a href="products.html?category=all" style="display: block; padding: 15px 20px; color: var(--color-primary); text-decoration: none; font-size: 1rem; border-bottom: 2px solid #f1f5f9; font-weight: bold; background: #f8fafc;">📦 مشاهده تمامی محصولات</a>
+              <a href="products.html?category=all" style="display: flex; align-items: center; padding: 15px 20px; color: var(--color-primary); text-decoration: none; font-size: 1rem; border-bottom: 2px solid #f1f5f9; font-weight: bold; background: #f8fafc;">
+                <span style="margin-left: 8px; display: inline-flex;"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg></span> مشاهده تمامی محصولات
+              </a>
               ${categoryLinksHtml}
             </div>
           </div>
@@ -89,8 +91,12 @@ export function renderHeader() {
         </nav>
 
         <div style="display: flex; align-items: center; gap: 10px;">
-          <a href="buyer-panel.html" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">👤 پنل خریدار</a>
-          <a href="seller-panel.html" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem;">🏢 پنل فروشنده</a>
+          <a href="buyer-panel.html" class="btn btn-primary" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; font-size: 0.85rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> پنل خریدار
+          </a>
+          <a href="seller-panel.html" class="btn btn-primary" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; font-size: 0.85rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg> پنل فروشنده
+          </a>
           <div style="width: 1px; height: 35px; background-color: #e2e8f0; margin: 0 5px;"></div>
           <div style="display: flex; align-items: center; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: var(--radius-md); padding: 6px 12px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); transition: all 0.2s ease;" onmouseover="this.style.borderColor='var(--color-primary)'" onmouseout="this.style.borderColor='#cbd5e1'">
             <span style="font-size: 0.75rem; color: #64748b; font-weight: 600; margin-left: 8px;">اکانت نمایشی:</span>

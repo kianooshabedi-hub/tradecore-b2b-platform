@@ -6,7 +6,6 @@ import { ProductService } from '../services/productService.js';
 import { AppStore } from '../data/appStore.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 👈 اضافه کردن هدر به بالای صفحه
     const headerElement = document.querySelector('header') || document.getElementById('main-header');
     if(headerElement) {
         headerElement.innerHTML = renderHeader();
@@ -22,10 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // دریافت محصولات این شرکت
     const companyProducts = await ProductService.getProductsBySupplierId(businessId);
     
-    // چک کردن وضعیت لایک شرکت
     const favBusinesses = AppStore.getFavBusinesses();
     const isFavorite = favBusinesses.includes(business.id);
 
@@ -34,6 +31,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function renderBusinessProfile(business, products, isFavorite) {
+    const starFilled = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    const starOutline = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    const locIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+    const checkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
     const content = `
         <div class="container" style="margin-top: 2rem; margin-bottom: 4rem;">
             <!-- هدر شرکت -->
@@ -43,15 +45,15 @@ function renderBusinessProfile(business, products, isFavorite) {
                     <div>
                         <h1 style="font-size: 1.8rem; color: #0f172a; margin-bottom: 5px;">${business.name}</h1>
                         <p style="color: #64748b; font-size: 1rem; margin-bottom: 10px;">${business.englishName || ''}</p>
-                        <span style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem;">📍 ${business.city}، ${business.country}</span>
+                        <span style="display: inline-flex; align-items: center; background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem;">${locIcon} ${business.city}، ${business.country}</span>
                         <span style="background: #eff6ff; color: #2563eb; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; margin-right: 5px;">صنعت: ${business.industry}</span>
                     </div>
                 </div>
                 
                 <div style="text-align: left;">
                     <!-- دکمه علاقه‌مندی شرکت -->
-                    <button id="btn-favorite-business" class="btn btn-outline" style="font-weight: bold; width: 220px; transition: all 0.3s ease; border-color: ${isFavorite ? '#eab308' : '#cbd5e1'}; color: ${isFavorite ? '#eab308' : '#475569'}; background: ${isFavorite ? '#fefce8' : 'transparent'};">
-                        ${isFavorite ? '⭐ شرکت نشان شد' : '⭐ افزودن شرکت به نشان‌شده‌ها'}
+                    <button id="btn-favorite-business" class="btn btn-outline" style="display: inline-flex; align-items: center; justify-content: center; font-weight: bold; width: 240px; transition: all 0.3s ease; border-color: ${isFavorite ? '#eab308' : '#cbd5e1'}; color: ${isFavorite ? '#eab308' : '#475569'}; background: ${isFavorite ? '#fefce8' : 'transparent'};">
+                        ${isFavorite ? starFilled + ' شرکت نشان شد' : starOutline + ' افزودن شرکت به نشان‌شده‌ها'}
                     </button>
                 </div>
             </div>
@@ -68,7 +70,7 @@ function renderBusinessProfile(business, products, isFavorite) {
                     <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
                         <h3 style="margin-bottom: 1rem; color: #1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">گواهینامه‌ها و استانداردها</h3>
                         <ul style="list-style: none; padding: 0; color: #475569; font-size: 0.95rem;">
-                            ${business.certifications ? business.certifications.map(c => `<li style="margin-bottom: 8px;">✔️ ${c}</li>`).join('') : '<li>ثبت نشده</li>'}
+                            ${business.certifications ? business.certifications.map(c => `<li style="display: flex; align-items: center; margin-bottom: 8px;">${checkIcon} ${c}</li>`).join('') : '<li style="color: #94a3b8;">ثبت نشده</li>'}
                         </ul>
                     </div>
                 </div>
@@ -100,14 +102,18 @@ function renderBusinessProfile(business, products, isFavorite) {
 function setupBusinessEvents(business) {
     document.getElementById('btn-favorite-business')?.addEventListener('click', (e) => {
         const isAdded = AppStore.toggleFavBusiness(business.id);
-        const btn = e.target;
+        const btn = e.target.closest('button');
+        
+        const starFilled = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+        const starOutline = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+
         if (isAdded) {
-            btn.innerHTML = '⭐ شرکت نشان شد';
+            btn.innerHTML = starFilled + ' شرکت نشان شد';
             btn.style.borderColor = '#eab308'; 
             btn.style.color = '#eab308';
             btn.style.background = '#fefce8';
         } else {
-            btn.innerHTML = '⭐ افزودن شرکت به نشان‌شده‌ها';
+            btn.innerHTML = starOutline + ' افزودن شرکت به نشان‌شده‌ها';
             btn.style.borderColor = '#cbd5e1'; 
             btn.style.color = '#475569';
             btn.style.background = 'transparent';

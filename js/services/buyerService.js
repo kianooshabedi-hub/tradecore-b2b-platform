@@ -2,7 +2,7 @@
 
 import { AppStore } from '../data/appStore.js';
 import { ProductService } from './productService.js';
-import { businesses } from '../data/businesses.js'; // اضافه شدن دیتابیس شرکت‌ها
+import { businesses } from '../data/businesses.js';
 
 export const BuyerService = {
   getProfile: async () => {
@@ -19,7 +19,7 @@ export const BuyerService = {
 
     const populatedRfqs = await Promise.all(mySentRfqs.map(async (rfq) => {
       const product = await ProductService.getProductById(rfq.productId);
-      const supplier = businesses.find(b => b.id === rfq.supplierId); // پیدا کردن اسم شرکت فروشنده
+      const supplier = businesses.find(b => b.id === rfq.supplierId); 
       return { 
         ...rfq, 
         productName: product ? product.name : 'محصول نامشخص',
@@ -33,14 +33,23 @@ export const BuyerService = {
   submitRfq: async (productId, supplierId, message) => {
     await new Promise(resolve => setTimeout(resolve, 400));
     const activeUserId = AppStore.getActiveUserId();
-    const today = new Date().toISOString().split('T')[0];
+    
+    // 🌟 دریافت تاریخ و ساعت دقیق سیستم با فرمت شمسی
+    const now = new Date();
+    const formattedDateTime = now.toLocaleString('fa-IR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
     
     const newRfq = {
       id: 'rfq-' + Math.floor(Math.random() * 10000),
       productId: productId,
       buyerId: activeUserId,
       supplierId: supplierId,
-      date: today,
+      date: formattedDateTime, // 👈 تخصیص تاریخ و ساعت سیستم
       status: 'pending',
       message: message
     };

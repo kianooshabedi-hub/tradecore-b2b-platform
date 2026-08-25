@@ -19,11 +19,6 @@ async function initHomePage() {
   await loadFeaturedProducts();
 }
 
-/**
- * ایجاد نوار جستجو و هندل کردن رویدادها
- */
-// فقط این تابع رو تو js/pages/home.js پیدا کن و جایگزین کن
-
 function initSearch() {
   const searchContainer = document.getElementById('search-container');
   if (!searchContainer) return;
@@ -45,7 +40,6 @@ function initSearch() {
     const productGrid = document.getElementById('product-grid');
     productGrid.innerHTML = '<div style="text-align: center; padding: 2rem; width: 100%;">در حال بررسی...</div>';
     
-    // اصلاح باگ عنوان:
     const sectionTitle = document.querySelector('.featured-products-section .section-title');
     if (query.trim() === '') {
       sectionTitle.textContent = "محصولات پیشنهادی";
@@ -83,7 +77,6 @@ async function loadFeaturedProducts() {
   if (!productGrid) return;
   productGrid.innerHTML = '<div style="text-align: center; padding: 2rem; width: 100%;">در حال دریافت محصولات...</div>';
   
-  // ریست کردن عنوان به حالت پیش‌فرض
   document.querySelector('.featured-products-section .section-title').textContent = "محصولات پیشنهادی";
 
   const products = await ProductService.getFeaturedProducts();
@@ -110,21 +103,19 @@ function renderProductCards(products, container) {
             </a>
         <p class="product-desc">${product.shortDescription}</p>
         
-        <!-- بخش جدید: نمایش نام تامین‌کننده -->
         <div class="product-supplier" style="font-size: 0.8rem; color: var(--color-primary); margin-top: 5px; display: flex; align-items: center; gap: 5px;">
-          🏢 <span style="font-weight: 600;">${product.supplierName}</span>
-          ${product.supplierStatus === 'verified' ? '<span title="شرکت تایید شده" style="color: #10b981;">✔️</span>' : ''}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg> <span style="font-weight: 600;">${product.supplierName}</span>
+          ${product.supplierStatus === 'verified' ? '<span title="شرکت تایید شده" style="color: #10b981; display: inline-flex;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>' : ''}
         </div>
 
         <div class="product-meta">
-          <span class="product-country">📍 ${product.country}</span>
+          <span class="product-country" style="display: flex; align-items: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> ${product.country}</span>
           <span class="product-price ${product.priceType === 'rfq' ? 'price-rfq' : ''}">
             ${product.priceRange}
           </span>
         </div>
       </div>
       <div class="product-actions">
-        <!-- اضافه شدن پارامتر openRfq=true به انتهای آدرس -->
         <button class="btn btn-primary btn-full" onclick="window.location.href='product.html?id=${product.id}&openRfq=true'">
           درخواست قیمت (RFQ)
         </button>

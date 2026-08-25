@@ -5,7 +5,7 @@ export const businesses = [
     id: "biz-1", // POUYA-NEGAR-001
     name: "شرکت صنایع بسته‌بندی پویا نگار",
     englishName: "Pouya Negar Packaging Industries",
-    logo: "images/businesses/pouya-negar-logo.jpg",
+    logo: "images/businesses/pouya-negar-logo.png",
     country: "ایران",
     city: "اصفهان",
     industry: "تولید ظروف فلزی و روغن‌های صنعتی",
@@ -21,7 +21,7 @@ export const businesses = [
     id: "biz-2", // EVRIN-001
     name: "Petro-Payesh Evrin Ravan Co.",
     englishName: "Petro-Payesh Evrin Ravan Co.",
-    logo: "images/businesses/evrin-logo.jpg",
+    logo: "images/businesses/evrin-logo.png",
     country: "ایران",
     city: "تهران",
     industry: "تولید روانکارهای تخصصی (Lubricants)",
@@ -37,7 +37,7 @@ export const businesses = [
     id: "biz-3", // ARIAN-PETRO-IDEA-001
     name: "آرین پترو ایده (API)",
     englishName: "Arian Petro Idea",
-    logo: "images/businesses/api-logo.jpg",
+    logo: "images/businesses/api-logo.png",
     country: "ایران",
     city: "تهران",
     industry: "تولید روانکارها (دانش‌بنیان)",

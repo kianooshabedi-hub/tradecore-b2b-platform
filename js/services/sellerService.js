@@ -41,7 +41,6 @@ export const SellerService = {
     }
   },
 
-  // تابع ارسال پاسخ به خریدار
   replyToRfq: async (rfqId, replyMessage) => {
     await new Promise(resolve => setTimeout(resolve, 300));
     
@@ -49,9 +48,19 @@ export const SellerService = {
     const rfq = allRfqs.find(r => r.id === rfqId);
     
     if(rfq) {
+      // 🌟 دریافت تاریخ و ساعت دقیق سیستم برای پاسخ فروشنده
+      const now = new Date();
+      const formattedDateTime = now.toLocaleString('fa-IR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+      });
+
       rfq.status = 'replied'; 
       rfq.reply = replyMessage; 
-      rfq.replyDate = new Date().toISOString().split('T')[0]; 
+      rfq.replyDate = formattedDateTime; // 👈 تخصیص تاریخ و ساعت
       
       AppStore.updateRfq(rfq); 
       return true;

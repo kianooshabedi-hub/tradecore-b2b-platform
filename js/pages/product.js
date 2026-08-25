@@ -69,7 +69,7 @@ function renderProduct(product, supplier, isFavorite) {
                                 <img src="${supplier.logo || 'images/default-logo.png'}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid #cbd5e1;">
                                 <div>
                                     <h3 style="font-size: 1.1rem; color: #0f172a; margin-bottom: 5px;">${supplier.name}</h3>
-                                    <p style="font-size: 0.85rem; color: #64748b;">📍 ${supplier.city || 'ایران'}</p>
+                                    <p style="font-size: 0.85rem; color: #64748b; display: flex; align-items: center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> ${supplier.city || 'ایران'}</p>
                                 </div>
                             </div>
                             <a href="business.html?id=${supplier.id}" class="btn btn-outline" style="font-size: 0.85rem; padding: 6px 12px;">مشاهده پروفایل شرکت</a>
@@ -81,8 +81,8 @@ function renderProduct(product, supplier, isFavorite) {
                         </div>
 
                         <!-- دکمه علاقه‌مندی‌ها -->
-                        <button id="btn-favorite-product" class="btn btn-outline btn-full" style="margin-top: 10px; font-weight: bold; transition: all 0.3s ease; border-color: ${isFavorite ? '#eab308' : '#cbd5e1'}; color: ${isFavorite ? '#eab308' : '#475569'}; background: ${isFavorite ? '#fefce8' : 'transparent'};">
-                            ${isFavorite ? '⭐ در علاقه‌مندی‌ها ذخیره شد' : '⭐ افزودن به علاقه‌مندی‌ها'}
+                        <button id="btn-favorite-product" class="btn btn-outline btn-full" style="margin-top: 10px; font-weight: bold; transition: all 0.3s ease; border-color: ${isFavorite ? '#eab308' : '#cbd5e1'}; color: ${isFavorite ? '#eab308' : '#475569'}; background: ${isFavorite ? '#fefce8' : 'transparent'}; display: flex; justify-content: center; align-items: center;">
+                            ${isFavorite ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> در علاقه‌مندی‌ها ذخیره شد' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> افزودن به علاقه‌مندی‌ها'}
                         </button>
                     </div>
 
@@ -104,7 +104,7 @@ function setupEvents(product) {
     document.getElementById('btn-submit-rfq')?.addEventListener('click', async (e) => {
         const activeUserId = AppStore.getActiveUserId();
         if (activeUserId === product.supplierId) {
-            alert('❌ شما نمی‌توانید برای شرکت خودتان استعلام بفرستید!');
+            alert('شما نمی‌توانید برای شرکت خودتان استعلام بفرستید!');
             return;
         }
         const message = document.getElementById('rfq-message').value;
@@ -116,7 +116,7 @@ function setupEvents(product) {
         await BuyerService.submitRfq(product.id, product.supplierId, message);
         document.getElementById('rfq-section').innerHTML = `
             <div style="background: #ecfdf5; padding: 1rem; border-radius: 8px; border: 1px dashed #10b981; text-align: center;">
-                <h4 style="color: #059669; margin-bottom: 0.5rem;">✔️ درخواست با موفقیت ثبت شد!</h4>
+                <h4 style="color: #059669; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 6px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> درخواست با موفقیت ثبت شد!</h4>
                 <a href="buyer-panel.html" style="font-size: 0.9rem; font-weight: bold; color: #047857; text-decoration: underline;">پیگیری در پنل خریدار</a>
             </div>
         `;
@@ -124,14 +124,14 @@ function setupEvents(product) {
 
     document.getElementById('btn-favorite-product')?.addEventListener('click', (e) => {
         const isAdded = AppStore.toggleFavProduct(product.id);
-        const btn = e.target;
+        const btn = e.target.closest('button');
         if (isAdded) {
-            btn.innerHTML = '⭐ در علاقه‌مندی‌ها ذخیره شد';
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> در علاقه‌مندی‌ها ذخیره شد';
             btn.style.borderColor = '#eab308'; 
             btn.style.color = '#eab308';
             btn.style.background = '#fefce8';
         } else {
-            btn.innerHTML = '⭐ افزودن به علاقه‌مندی‌ها';
+            btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> افزودن به علاقه‌مندی‌ها';
             btn.style.borderColor = '#cbd5e1'; 
             btn.style.color = '#475569';
             btn.style.background = 'transparent';
