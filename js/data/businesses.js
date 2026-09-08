@@ -2,7 +2,7 @@
 
 export const businesses = [
   {
-    id: "biz-1", // POUYA-NEGAR-001
+    id: "biz-1", 
     name: "شرکت صنایع بسته‌بندی پویا نگار",
     englishName: "Pouya Negar Packaging Industries",
     logo: "images/businesses/pouya-negar-logo.png",
@@ -11,14 +11,17 @@ export const businesses = [
     industry: "تولید ظروف فلزی و روغن‌های صنعتی",
     description: "اولین مجتمع تولید ظروف فلزی صنعتی و غذایی در استان اصفهان. مجهز به خطوط کامل لیتوگرافی، چاپ، ساخت اتوماتیک قوطی و تولید روغن موتور با برند تورال (Toral).",
     website: "اطلاعات در دسترس نیست",
-    email: "info@pouyanegar.local", // دیتای پیش‌فرض برای دمو
+    email: "info@pouyanegar.local", 
     phone: "+98-31-0000000",
     status: "verified",
-    joinDate: "1383", // بر اساس سال تاسیس
-    certifications: ["ISO 9001:2000", "ISO 14001:2004", "OHSAS 18001", "ISO 17025"]
+    joinDate: "1383", 
+    certifications: ["ISO 9001:2000", "ISO 14001:2004", "OHSAS 18001", "ISO 17025"],
+    roles: ['buyer', 'supplier', 'service_provider'], 
+    subscriptionTier: 'enterprise', 
+    usageStats: { productsListed: 12, messagesSent: 45, contactsViewed: 150 } 
   },
   {
-    id: "biz-2", // EVRIN-001
+    id: "biz-2", 
     name: "Petro-Payesh Evrin Ravan Co.",
     englishName: "Petro-Payesh Evrin Ravan Co.",
     logo: "images/businesses/evrin-logo.png",
@@ -31,10 +34,13 @@ export const businesses = [
     phone: "+98-21-0000000",
     status: "verified",
     joinDate: "1390",
-    certifications: ["ISO 9001", "API Standards"]
+    certifications: ["ISO 9001", "API Standards"],
+    roles: ['supplier'], 
+    subscriptionTier: 'pro',
+    usageStats: { productsListed: 61, messagesSent: 12, contactsViewed: 40 }
   },
   {
-    id: "biz-3", // ARIAN-PETRO-IDEA-001
+    id: "biz-3", 
     name: "آرین پترو ایده (API)",
     englishName: "Arian Petro Idea",
     logo: "images/businesses/api-logo.png",
@@ -47,6 +53,9 @@ export const businesses = [
     phone: "+98-21-1111111",
     status: "verified",
     joinDate: "1386",
-    certifications: ["Knowledge-Based Company"]
+    certifications: ["Knowledge-Based Company"],
+    roles: ['supplier', 'service_provider'], 
+    subscriptionTier: 'free', 
+    usageStats: { productsListed: 54, messagesSent: 5, contactsViewed: 0 }
   }
 ];

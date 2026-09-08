@@ -6,16 +6,16 @@ const USER_KEY = 'tradecore_active_user';
 const RFQ_KEY = 'tradecore_rfqs';
 const FAV_PROD_KEY = 'tc_fav_prods';
 const FAV_BIZ_KEY = 'tc_fav_biz';
+const DEALS_KEY = 'tradecore_deals'; 
 
-// 🌟 ارتقای ساختار داده‌های نمایشی برای پشتیبانی از معماری جدید
-// در نسخه واقعی، این تغییرات روی دیتابیس اعمال می‌شود
 businesses.forEach(biz => {
-    // اگر شرکتی نقش نداشت، پیش‌فرض هم خریدار و هم تامین‌کننده باشد
     if (!biz.roles) biz.roles = ['buyer', 'supplier'];
+    if (!biz.subscriptionTier) biz.subscriptionTier = 'free'; 
+    if (!biz.usageStats) biz.usageStats = { productsListed: 0, messagesSent: 0, contactsViewed: 0 };
     
-    // تفکیک اطلاعات طبق معماری جدید (اگر از قبل نداشتند)
     if (!biz.buyerProfile) biz.buyerProfile = { neededCategories: [], preferredCountries: [] };
     if (!biz.supplierProfile) biz.supplierProfile = { suppliedCategories: [], certifications: [], leadTime: '' };
+    if (!biz.serviceProfile) biz.serviceProfile = { offeredServices: [], serviceAreas: [] };
     if (!biz.contact) biz.contact = { email: biz.email || '', phone: biz.phone || '', whatsapp: '', contactPerson: '' };
 });
 
@@ -28,14 +28,36 @@ export const AppStore = {
     const id = AppStore.getActiveUserId();
     return businesses.find(b => b.id === id);
   },
+
+  checkFeatureAccess: (featureKey) => {
+    const profile = AppStore.getActiveUserProfile();
+    if (!profile) return false;
+
+    const tier = profile.subscriptionTier || 'free';
+    const stats = profile.usageStats || {};
+
+    const tierLimits = {
+        free: { maxProducts: 10, maxMessages: 5, canViewContacts: false },
+        basic: { maxProducts: 50, maxMessages: 50, canViewContacts: true },
+        pro: { maxProducts: 200, maxMessages: 500, canViewContacts: true },
+        enterprise: { maxProducts: 999999, maxMessages: 999999, canViewContacts: true }
+    };
+
+    const myLimits = tierLimits[tier];
+
+    if (featureKey === 'add_item') return stats.productsListed < myLimits.maxProducts;
+    if (featureKey === 'send_message') return stats.messagesSent < myLimits.maxMessages;
+    if (featureKey === 'view_contact') return myLimits.canViewContacts;
+
+    return true;
+  },
   
-  // 🌟 منطق جدید: محاسبه درصد تکمیل پروفایل شرکت
   getProfileCompletionStatus: () => {
     const profile = AppStore.getActiveUserProfile();
     if (!profile) return { percentage: 0, missingTasks: [] };
 
     let score = 0;
-    const totalFields = 6;
+    let totalFields = 6;
     const missingTasks = [];
 
     if (profile.name) score++; 
@@ -53,10 +75,12 @@ export const AppStore = {
     if (profile.industry) score++; 
     else missingTasks.push('انتخاب صنعت و حوزه فعالیت');
 
-    // بررسی ثبت حداقل یک محصول برای تامین‌کنندگان
-    const hasProducts = true; // در آینده از ProductService.getProductsBySupplierId چک می‌شود
-    if (profile.roles.includes('supplier') && hasProducts) score++;
-    else if (profile.roles.includes('supplier')) missingTasks.push('ثبت اولین محصول');
+    const isSupplierOrService = profile.roles.includes('supplier') || profile.roles.includes('service_provider');
+    if (isSupplierOrService) {
+        const hasItems = true; 
+        if (hasItems) score++;
+        else missingTasks.push('ثبت اولین محصول یا خدمت');
+    }
 
     const percentage = Math.round((score / totalFields) * 100);
     return { percentage, missingTasks };
@@ -113,5 +137,46 @@ export const AppStore = {
     
     localStorage.setItem(FAV_BIZ_KEY, JSON.stringify(allFavs));
     return index === -1;
+  },
+
+  getAllTenders: () => JSON.parse(localStorage.getItem('tradecore_tenders') || '[]'),
+  
+  addTender: (tender) => {
+    const tenders = AppStore.getAllTenders();
+    tenders.unshift(tender);
+    localStorage.setItem('tradecore_tenders', JSON.stringify(tenders));
+  },
+  
+  updateTender: (updatedTender) => {
+    const tenders = AppStore.getAllTenders();
+    const index = tenders.findIndex(t => t.id === updatedTender.id);
+    if (index !== -1) {
+      tenders[index] = updatedTender;
+      localStorage.setItem('tradecore_tenders', JSON.stringify(tenders));
+    }
+  },
+
+  deleteTender: (tenderId) => {
+    const tenders = AppStore.getAllTenders();
+    const filtered = tenders.filter(t => t.id !== tenderId);
+    localStorage.setItem('tradecore_tenders', JSON.stringify(filtered));
+  },
+
+  getAllDeals: () => JSON.parse(localStorage.getItem(DEALS_KEY) || '[]'),
+  
+  addDeal: (deal) => {
+    if(!deal.pitches) deal.pitches = []; // 🌟 اضافه کردن آرایه آفرهای خدمات
+    const deals = AppStore.getAllDeals();
+    deals.unshift(deal);
+    localStorage.setItem(DEALS_KEY, JSON.stringify(deals));
+  },
+  
+  updateDeal: (updatedDeal) => {
+    const deals = AppStore.getAllDeals();
+    const index = deals.findIndex(d => d.id === updatedDeal.id);
+    if (index !== -1) {
+        deals[index] = updatedDeal;
+        localStorage.setItem(DEALS_KEY, JSON.stringify(deals));
+    }
   }
 };
