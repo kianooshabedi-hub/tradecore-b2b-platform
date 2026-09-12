@@ -1,202 +1,107 @@
 // js/services/sellerService.js
 
+import { SellerStore } from '../data/sellerStore.js';
+import { businesses } from '../data/businesses.js';
 import { AppStore } from '../data/appStore.js';
+import { AnalyticsStore } from '../data/analyticsStore.js';
 import { ProductService } from './productService.js';
-import { businesses } from '../data/businesses.js'; 
+
+function filterEventsByDate(events, dateRange) {
+    if (!dateRange || dateRange === 'all') return events;
+    const now = new Date().getTime();
+    if (typeof dateRange === 'number') {
+        const cutoff = now - (dateRange * 24 * 60 * 60 * 1000);
+        return events.filter(e => new Date(e.timestamp).getTime() >= cutoff);
+    } else if (dateRange.from && dateRange.to) {
+        const fromTime = new Date(dateRange.from).getTime();
+        const toTime = new Date(dateRange.to).getTime() + 86400000;
+        return events.filter(e => {
+            const t = new Date(e.timestamp).getTime();
+            return t >= fromTime && t <= toTime;
+        });
+    }
+    return events;
+}
 
 export const SellerService = {
-  getProfile: async () => {
-    return AppStore.getActiveUserProfile();
-  },
+    getProfile: async () => {
+        const bizId = AppStore.getActiveUserId();
+        return businesses.find(b => b.id === bizId) || null;
+    },
 
-  getDashboardSummary: async () => {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      const activeUserId = AppStore.getActiveUserId();
-      const myProducts = await ProductService.getProductsBySupplierId(activeUserId);
-      const allRfqs = AppStore.getAllRfqs();
-      
-      const incomingRfqs = allRfqs.filter(r => r.supplierId === activeUserId);
+    getDashboardSummary: async () => {
+        const bizId = AppStore.getActiveUserId();
+        const events = AnalyticsStore.getEvents() || [];
+        const profileViews = events.filter(e => e.eventType === 'Business Viewed' && e.targetId === bizId).length;
 
-      const populatedRfqs = await Promise.all(incomingRfqs.map(async (rfq) => {
-        const product = await ProductService.getProductById(rfq.productId);
-        const buyer = businesses.find(b => b.id === rfq.buyerId); 
-        return { 
-          ...rfq, 
-          productName: product ? product.name : 'محصول نامشخص',
-          buyerName: buyer ? buyer.name : 'خریدار نامشخص'
+        const myProducts = await ProductService.getProductsBySupplierId(bizId);
+        const rfqs = AppStore.getAllRfqs().filter(r => r.supplierId === bizId);
+        const deals = AppStore.getAllDeals().filter(d => d.mainSupplierId === bizId || (d.pitches && d.pitches.some(p => p.supplierId === bizId)));
+
+        return {
+            productsCount: myProducts.length,
+            profileViews: profileViews,
+            newRfqsCount: rfqs.filter(r => r.status === 'pending').length,
+            newDealsCount: deals.filter(d => d.status === 'in_negotiation').length,
+            sentProposalsCount: deals.length
         };
-      }));
+    },
 
-      const allTenders = AppStore.getAllTenders();
-      let sentProposals = 0;
-      allTenders.forEach(t => {
-          if (t.proposals && t.proposals.some(p => p.supplierId === activeUserId)) {
-              sentProposals++;
-          }
-      });
+    getSellerAnalytics: async (dateRange = 'all') => {
+        const bizId = AppStore.getActiveUserId();
+        const myProducts = await ProductService.getProductsBySupplierId(bizId);
+        const myProductIds = myProducts.map(p => p.id);
 
-      // 🌟 محاسبه نوتیفیکیشن‌های پنل فروشنده
-      const newRfqsCount = incomingRfqs.filter(r => r.status === 'pending').length;
-      
-      let newTendersCount = 0;
-      const myCategoryIds = [...new Set(myProducts.map(p => p.categoryId))];
-      allTenders.forEach(t => {
-          if (t.buyerId !== activeUserId && t.status === 'active' && !t.proposals.some(p => p.supplierId === activeUserId)) {
-              const tCats = Array.isArray(t.categoryId) ? t.categoryId : [t.categoryId];
-              if(tCats.some(c => myCategoryIds.includes(c))) newTendersCount++;
-          }
-      });
+        let allEvents = AnalyticsStore.getEvents() || [];
+        let filteredEvents = filterEventsByDate(allEvents, dateRange);
 
-      const profile = AppStore.getActiveUserProfile();
-      let newDealsCount = 0;
-      if (profile && profile.roles.includes('service_provider')) {
-          const deals = AppStore.getAllDeals();
-          newDealsCount = deals.filter(d => !d.pitches || !d.pitches.some(p => p.supplierId === activeUserId)).length;
-      }
+        let totalProfileViews = 0;
+        let totalProductViews = 0;
+        let productStats = {};
+        let timeSeriesObj = {}; // 🌟 ذخیره اطلاعات روزانه برای نمودار
 
-      return {
-        productsCount: myProducts.length,
-        newRfqsCount: newRfqsCount,
-        sentProposalsCount: sentProposals, 
-        profileViews: 0, 
-        rfqs: populatedRfqs,
-        newTendersCount: newTendersCount, // برای نوتیفیکیشن
-        newDealsCount: newDealsCount // برای نوتیفیکیشن رادار
-      };
-    } catch (error) {
-      console.error(error);
-      return { productsCount: 0, newRfqsCount: 0, sentProposalsCount: 0, profileViews: 0, rfqs: [], newTendersCount:0, newDealsCount:0 };
-    }
-  },
-
-  getAnalyticsData: async () => {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      const activeUserId = AppStore.getActiveUserId();
-      const myProducts = await ProductService.getProductsBySupplierId(activeUserId);
-
-      const productViews = myProducts.map((p, index) => ({
-          id: p.id,
-          name: p.name,
-          views: 0, 
-          ageIndex: index 
-      }));
-
-      return {
-          totalViews: 0,
-          chartData: [0, 0, 0, 0, 0, 0, 0], 
-          productViews: productViews
-      };
-  },
-
-  replyToRfq: async (rfqId, replyMessage) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const allRfqs = AppStore.getAllRfqs();
-    const rfq = allRfqs.find(r => r.id === rfqId);
-    if(rfq) {
-      const now = new Date();
-      const formattedDateTime = now.toLocaleString('fa-IR', {
-          year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-      });
-      rfq.status = 'replied'; 
-      rfq.reply = replyMessage; 
-      rfq.replyDate = formattedDateTime; 
-      AppStore.updateRfq(rfq); 
-      return true;
-    }
-    return false;
-  },
-
-  getRelevantTenders: async () => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const activeUserId = AppStore.getActiveUserId();
-    
-    const myProducts = await ProductService.getProductsBySupplierId(activeUserId);
-    const myCategoryIds = [...new Set(myProducts.map(p => p.categoryId))];
-    const allTenders = AppStore.getAllTenders();
-    
-    const relevantTenders = allTenders.filter(t => {
-        if (t.buyerId === activeUserId) return false;
-        const tCats = Array.isArray(t.categoryId) ? t.categoryId : [t.categoryId];
-        return tCats.some(c => myCategoryIds.includes(c));
-    });
-
-    const populatedTenders = relevantTenders.map(t => {
-        const buyer = businesses.find(b => b.id === t.buyerId);
-        return { ...t, buyerName: buyer ? buyer.name : 'خریدار نامشخص' };
-    });
-
-    return populatedTenders;
-  },
-
-  submitProposal: async (tenderId, message, price) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const activeUserId = AppStore.getActiveUserId();
-    const allTenders = AppStore.getAllTenders();
-    const tender = allTenders.find(t => t.id === tenderId);
-    
-    if (tender) {
-        const now = new Date();
-        const formattedDateTime = now.toLocaleString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-        
-        tender.proposals.push({
-            id: 'prop-' + Math.floor(Math.random() * 10000),
-            supplierId: activeUserId,
-            message: message,
-            price: price,
-            date: formattedDateTime
+        myProducts.forEach(p => {
+            productStats[p.id] = { id: p.id, name: p.name, views: 0, saves: 0 };
         });
-        
-        AppStore.updateTender(tender);
-        return true;
+
+        filteredEvents.forEach(e => {
+            const isProfileView = e.eventType === 'Business Viewed' && e.targetId === bizId;
+            const isProductView = e.eventType === 'Product Viewed' && myProductIds.includes(e.targetId);
+
+            if (isProfileView || isProductView) {
+                // استخراج تاریخ برای رسم نمودار
+                const dateStr = new Date(e.timestamp).toISOString().split('T')[0];
+                if (!timeSeriesObj[dateStr]) timeSeriesObj[dateStr] = 0;
+                timeSeriesObj[dateStr]++;
+
+                // جمع کل
+                if (isProfileView) totalProfileViews++;
+                if (isProductView) {
+                    totalProductViews++;
+                    if (productStats[e.targetId]) productStats[e.targetId].views++;
+                }
+            }
+
+            if (e.eventType === 'Product Saved' && myProductIds.includes(e.targetId)) {
+                if (productStats[e.targetId]) productStats[e.targetId].saves++;
+            }
+        });
+
+        // 🌟 مرتب‌سازی داده‌های نمودار بر اساس تاریخ
+        const sortedDates = Object.keys(timeSeriesObj).sort();
+        const chartData = sortedDates.map(dateStr => {
+            const pDate = new Date(dateStr).toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' });
+            return { label: pDate, value: timeSeriesObj[dateStr] };
+        });
+
+        const sortedProducts = Object.values(productStats).sort((a, b) => b.views - a.views);
+
+        return {
+            totalProfileViews,
+            totalProductViews,
+            totalViews: totalProfileViews + totalProductViews,
+            products: sortedProducts,
+            chartData: chartData // 🌟 ارسال داده‌های نمودار به UI
+        };
     }
-    return false;
-  },
-
-  getServiceOpportunities: async () => {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      const activeUserId = AppStore.getActiveUserId();
-      const profile = businesses.find(b => b.id === activeUserId);
-      
-      if (!profile || !profile.roles.includes('service_provider')) return [];
-
-      const deals = AppStore.getAllDeals();
-      return deals.map(d => {
-          const b = businesses.find(x => x.id === d.buyerId);
-          const s = businesses.find(x => x.id === d.mainSupplierId);
-          return {
-              ...d,
-              buyerName: b ? b.name : 'نامشخص',
-              supplierName: s ? s.name : 'نامشخص'
-          };
-      }).reverse(); // جدیدترین‌ها بالا
-  },
-
-  // 🌟 ثبت واقعی پیشنهاد خدمات در دیتابیس معامله
-  submitServicePitch: async (dealId, type, message) => {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const activeUserId = AppStore.getActiveUserId();
-      const deals = AppStore.getAllDeals();
-      const deal = deals.find(d => d.id === dealId);
-      
-      if (deal) {
-          if(!deal.pitches) deal.pitches = [];
-          const now = new Date();
-          const formattedDateTime = now.toLocaleString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-          
-          deal.pitches.push({
-              id: 'pitch-' + Math.floor(Math.random() * 10000),
-              supplierId: activeUserId,
-              type: type,
-              message: message,
-              date: formattedDateTime,
-              status: 'pending'
-          });
-          
-          AppStore.updateDeal(deal);
-          return true;
-      }
-      return false;
-  }
 };

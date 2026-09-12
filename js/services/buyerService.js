@@ -3,6 +3,7 @@
 import { AppStore } from '../data/appStore.js';
 import { ProductService } from './productService.js';
 import { businesses } from '../data/businesses.js';
+import { MessageService } from './messageService.js'; // 🌟 افزوده شد
 
 export const BuyerService = {
   getProfile: async () => {
@@ -29,7 +30,6 @@ export const BuyerService = {
     const myTenders = AppStore.getAllTenders().filter(t => t.buyerId === activeUserId);
     const totalProposals = myTenders.reduce((acc, t) => acc + (t.proposals ? t.proposals.length : 0), 0);
 
-    // 🌟 محاسبه پیشنهادات خدماتی (Pitches) ارسال شده برای معاملات این خریدار
     const myDeals = AppStore.getAllDeals().filter(d => d.buyerId === activeUserId);
     let totalServicePitches = 0;
     myDeals.forEach(d => {
@@ -45,7 +45,7 @@ export const BuyerService = {
     };
   },
 
-  submitRfq: async (productId, supplierId, message) => {
+  submitRfq: async (productId, supplierIds, message, quantity = 'توافقی') => {
     await new Promise(resolve => setTimeout(resolve, 400));
     const activeUserId = AppStore.getActiveUserId();
     const now = new Date();
@@ -53,16 +53,23 @@ export const BuyerService = {
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
     });
     
-    const newRfq = {
-      id: 'rfq-' + Math.floor(Math.random() * 10000),
-      productId: productId,
-      buyerId: activeUserId,
-      supplierId: supplierId,
-      date: formattedDateTime,
-      status: 'pending',
-      message: message
-    };
-    AppStore.addRfq(newRfq);
+    const suppliersArray = Array.isArray(supplierIds) ? supplierIds : [supplierIds];
+
+    suppliersArray.forEach(supId => {
+        const newRfq = {
+            id: 'rfq-' + Math.floor(Math.random() * 100000),
+            productId: productId,
+            buyerId: activeUserId,
+            supplierId: supId,
+            quantity: quantity,
+            date: formattedDateTime,
+            status: 'pending', 
+            message: message
+        };
+        AppStore.addRfq(newRfq);
+        AppStore.addNotification(supId, `استعلام جدید (RFQ) دریافت شد`, 'alert', '#inbox');
+    });
+
     return true;
   },
 
@@ -79,18 +86,24 @@ export const BuyerService = {
           const now = new Date();
           const formattedDateTime = now.toLocaleString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
           
+          const dealId = 'deal-' + Math.floor(Math.random() * 10000);
           AppStore.addDeal({
-              id: 'deal-' + Math.floor(Math.random() * 10000),
+              id: dealId,
               type: 'rfq',
               sourceId: rfq.id,
               buyerId: rfq.buyerId,
               mainSupplierId: rfq.supplierId,
               title: `تأمین ${product ? product.name : 'محصول'}`,
-              quantity: 'بر اساس استعلام',
+              quantity: rfq.quantity || 'بر اساس استعلام',
               date: formattedDateTime,
-              status: 'active',
+              status: 'negotiating',
               pitches: []
           });
+
+          // 🌟 ایجاد چت روم و ارسال نوتیفیکیشن
+          await MessageService.createConversation([rfq.buyerId, rfq.supplierId], `مذاکره: تأمین ${product ? product.name : 'کالا'}`, dealId);
+          AppStore.addNotification(rfq.supplierId, `خریدار مذاکره برای RFQ را آغاز کرد`, 'info');
+
           return true;
       }
       return false;
@@ -120,11 +133,8 @@ export const BuyerService = {
       proposals: data.proposals || [] 
     };
 
-    if(data.id) {
-        AppStore.updateTender(newTender);
-    } else {
-        AppStore.addTender(newTender);
-    }
+    if(data.id) AppStore.updateTender(newTender);
+    else AppStore.addTender(newTender);
     return true;
   },
 
@@ -147,8 +157,9 @@ export const BuyerService = {
           const now = new Date();
           const formattedDateTime = now.toLocaleString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
           
+          const dealId = 'deal-' + Math.floor(Math.random() * 10000);
           AppStore.addDeal({
-              id: 'deal-' + Math.floor(Math.random() * 10000),
+              id: dealId,
               type: 'tender',
               sourceId: tender.id,
               buyerId: tender.buyerId,
@@ -156,15 +167,21 @@ export const BuyerService = {
               title: `پروژه/مناقصه: ${tender.title}`,
               quantity: tender.quantity,
               date: formattedDateTime,
-              status: 'active',
+              status: 'negotiating',
               pitches: []
           });
+
+          // 🌟 ایجاد چت روم
+          if(proposal) {
+              await MessageService.createConversation([tender.buyerId, proposal.supplierId], `مذاکره مناقصه: ${tender.title}`, dealId);
+              AppStore.addNotification(proposal.supplierId, `پیشنهاد شما پذیرفته شد! مذاکره آغاز شد.`, 'success');
+          }
+
           return true;
       }
       return false;
   },
 
-  // 🌟 تابع جدید: دریافت تمام پروپوزال‌های خدماتی که برای خریدار ارسال شده
   getIncomingServicePitches: async () => {
       await new Promise(resolve => setTimeout(resolve, 200));
       const activeUserId = AppStore.getActiveUserId();
@@ -184,6 +201,6 @@ export const BuyerService = {
               });
           }
       });
-      return allPitches.reverse(); // جدیدترین‌ها اول
+      return allPitches.reverse();
   }
 };

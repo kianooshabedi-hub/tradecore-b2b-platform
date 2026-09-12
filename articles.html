@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مقالات و دانش صنعتی | TradeCore B2B</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <header id="app-header"></header>
+
+  <main id="main-content" style="padding: var(--space-xl) 0; min-height: 70vh;">
+    <div class="container">
+      <div style="text-align: center; margin-bottom: 2.5rem; background: white; padding: 2.5rem; border-radius: 16px; border: 1px solid var(--color-border);">
+        <h1 style="font-size: 2.2rem; color: #0f172a; margin-bottom: 0.8rem;">دانش و راهنماهای تخصصی صنایع</h1>
+        <p style="color: #64748b; font-size: 1.05rem; max-width: 650px; margin: 0 auto 1.5rem;">
+          مقاله‌های فنی و آموزشی منتشرشده توسط تولیدکنندگان و تأمین‌کنندگان معتبر TradeCore
+        </p>
+        <div style="max-width: 550px; margin: 0 auto; display: flex; gap: 8px;">
+          <input type="text" id="article-search-input" class="form-input" placeholder="جستجو بر اساس عنوان، کلیدواژه یا برچسب...">
+          <button class="btn btn-primary" id="article-search-btn" style="padding: 0 25px;">جستجو</button>
+        </div>
+      </div>
+
+      <div id="articles-grid" class="grid-container">
+        <div style="text-align: center; padding: 3rem; grid-column: 1 / -1;">در حال دریافت جدیدترین مقالات...</div>
+      </div>
+    </div>
+  </main>
+
+  <footer id="app-footer"></footer>
+  <script type="module" src="js/pages/articles.js"></script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تحلیل و هوش بازار | TradeCore Market Intelligence</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    .mi-stat-card {
+        background: white; border-radius: 12px; padding: 1.5rem; 
+        border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .mi-section {
+        background: white; border-radius: 12px; padding: 1.5rem;
+        border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        margin-bottom: 2rem;
+    }
+    .progress-bar-bg { background: #f1f5f9; border-radius: 20px; height: 8px; width: 100%; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 20px; transition: width 0.5s ease; }
+    #industry-filter {
+        padding: 8px 15px; border-radius: 8px; border: 1px solid #cbd5e1;
+        font-family: inherit; font-size: 0.95rem; outline: none; min-width: 250px;
+        background-color: white; color: #1e293b; cursor: pointer;
+    }
+    #industry-filter:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .date-input-wrapper { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #cbd5e1; padding: 6px 14px; border-radius: 24px; transition: all 0.2s ease; cursor: pointer; }
+    .clean-date-input { border: none; outline: none; background: transparent; font-size: 0.85rem; font-family: inherit; color: #1e293b; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header id="app-header"></header>
+
+  <main id="main-content" style="padding: var(--space-xl) 0; background-color: #f8fafc; min-height: 80vh;">
+    <div class="container">
+      
+        <!-- هدر و فیلتر صنعت -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1 style="font-size: 2rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 900;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 5px;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    هوش بازار (Market Intelligence)
+                </h1>
+                <p style="color: #64748b; font-size: 1rem; margin: 0;">تحلیل زنده تقاضا، عرضه و فرصت‌های تجاری بر اساس رفتار خریداران</p>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label style="font-weight: 600; color: #475569;">فیلتر بر اساس صنعت:</label>
+                <select id="industry-filter" onchange="window.changeMarketCategory(this.value)">
+                    <option value="all">نمایش کل بازار (همه صنایع)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- فیلتر زمان (شبیه به پنل فروشنده) -->
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 2rem; align-items: center; padding-bottom: 1.5rem; border-bottom: 2px solid #e2e8f0;">
+            <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter(7, this)">۷ روز گذشته</button>
+            <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter(15, this)">۱۵ روز گذشته</button>
+            <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter(30, this)">۳۰ روز گذشته</button>
+            <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter(60, this)">۶۰ روز گذشته</button>
+            <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter(120, this)">۱۲۰ روز گذشته</button>
+            <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter(360, this)">۳۶۰ روز گذشته</button>
+            <button class="btn btn-primary" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter('all', this)">کل زمان</button>
+            <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeMarketDateFilter('custom', this)">زمان‌دهی دستی</button>
+            
+            <div id="mi-custom-date-container" style="display: none; align-items: center; gap: 12px; margin-right: auto; background: white; padding: 6px 16px; border-radius: 30px; border: 1px solid var(--color-border);">
+               <div class="date-input-wrapper">
+                   <span style="font-size: 0.8rem; color: #64748b;">از:</span>
+                   <input type="date" id="mi-date-from" class="clean-date-input">
+               </div>
+               <div style="width: 10px; height: 1px; background: #cbd5e1;"></div>
+               <div class="date-input-wrapper">
+                   <span style="font-size: 0.8rem; color: #64748b;">تا:</span>
+                   <input type="date" id="mi-date-to" class="clean-date-input">
+               </div>
+               <button class="btn btn-primary" style="padding: 4px 16px; font-size: 0.85rem; border-radius: 20px;" onclick="window.applyMarketCustomDate()">تأیید</button>
+            </div>
+        </div>
+
+        <!-- بدنه داینامیک داشبورد -->
+        <div id="market-dashboard-container">
+            <div style="text-align: center; padding: 5rem; color: #64748b;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+                <div>در حال پردازش داده‌های زنده...</div>
+            </div>
+        </div>
+
+    </div>
+  </main>
+
+  <footer id="app-footer"></footer>
+  <script type="module" src="js/pages/marketIntelligence.js"></script>
+</body>
+</html>

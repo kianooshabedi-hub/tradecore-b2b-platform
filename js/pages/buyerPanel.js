@@ -5,10 +5,12 @@ import { AppStore } from '../data/appStore.js';
 import { ProductService } from '../services/productService.js';
 import { businesses } from '../data/businesses.js';
 import { CategoryService } from '../services/categoryService.js'; 
+import { MessageService } from '../services/messageService.js';
+import { SupportService } from '../services/supportService.js'; // 🌟 اضافه شدن سرویس پشتیبانی
 
 let currentProfile = null;
 let currentSummary = null;
-
+let currentActiveChatId = null;
 let hasViewedPitches = false;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,9 +36,31 @@ window.showUpgradePaywall = (featureName) => {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
+function injectMissingTabs() {
+    const navUl = document.querySelector('.panel-nav ul');
+    if(navUl && !document.querySelector('[data-tab="messages"]')) {
+        const savedProductsLi = document.querySelector('[data-tab="saved-products"]').parentElement;
+        const newTabsHtml = `
+            <li><a href="#" data-tab="deals"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> معاملات من</a></li>
+            <li><a href="#" data-tab="messages"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> پیام‌ها و چت‌ها</a></li>
+            <li><a href="#" data-tab="shortlist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> لیست کوتاه مقایسه</a></li>
+            <li><a href="#" data-tab="notifications"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> مرکز اعلان‌ها</a></li>
+        `;
+        savedProductsLi.insertAdjacentHTML('beforebegin', newTabsHtml);
+    }
+
+    // 🌟 اضافه کردن اتوماتیک تب پشتیبانی
+    if(navUl && !document.querySelector('[data-tab="support"]')) {
+        const settingsLi = document.querySelector('[data-tab="settings"]').parentElement;
+        const supportHtml = `
+            <li><a href="#" data-tab="support"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> پشتیبانی و تیکت</a></li>
+        `;
+        settingsLi.insertAdjacentHTML('beforebegin', supportHtml);
+    }
+}
+
 function updateSidebarBadges() {
     if(!currentSummary) return;
-
     const pitchesTab = document.querySelector('.panel-nav a[data-tab="pitches"]');
     if(!pitchesTab) return;
 
@@ -47,13 +71,12 @@ function updateSidebarBadges() {
     }
 
     const totalNew = currentSummary.servicePitchesCount || 0;
-
     let badge = pitchesTab.querySelector('.nav-badge');
+    
     if(!badge) {
         badge = document.createElement('span');
         badge.className = 'nav-badge';
         badge.style.cssText = 'background-color: #8b5cf6; color: white; border-radius: 50%; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; margin-right: auto; font-weight: bold; box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);';
-        
         pitchesTab.style.display = 'flex';
         pitchesTab.style.alignItems = 'center';
         pitchesTab.appendChild(badge);
@@ -68,6 +91,7 @@ function updateSidebarBadges() {
 }
 
 async function initBuyerPanel() {
+  injectMissingTabs();
   currentProfile = await BuyerService.getProfile();
   if (currentProfile) document.getElementById('top-user-name').innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 6px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> ${currentProfile.name} (خریدار)`;
   
@@ -92,32 +116,51 @@ async function initBuyerPanel() {
           updateSidebarBadges();
           loadPitchesTab();
       }
+      else if (tab === 'deals') loadDealsTab();
+      else if (tab === 'messages') loadMessagesTab();
+      else if (tab === 'shortlist') loadShortlistTab();
       else if (tab === 'saved-products') loadFavoritesTab('products');
       else if (tab === 'saved-businesses') loadFavoritesTab('businesses');
+      else if (tab === 'notifications') loadNotificationsTab();
+      else if (tab === 'support') loadSupportTab(); // 🌟 رویداد تب پشتیبانی
       else if (tab === 'settings') loadProfileTab(); 
     });
   });
+
+  const pendingChat = localStorage.getItem('tradecore_open_chat');
+  if (pendingChat) {
+      localStorage.removeItem('tradecore_open_chat');
+      setTimeout(() => {
+          const msgTab = document.querySelector('[data-tab="messages"]');
+          if (msgTab) {
+              msgTab.click(); 
+              setTimeout(() => window.openChatView(pendingChat), 300); 
+          }
+      }, 100);
+  }
 }
+
+// ==========================================
+// 🌟 Tabs Rendering Functions
+// ==========================================
 
 function loadDashboardTab() {
   const content = document.getElementById('panel-content');
   const profileStatus = AppStore.getProfileCompletionStatus(); 
-
   const tasksHtml = profileStatus.missingTasks.length > 0 
     ? `<ul style="margin-top: 10px; font-size: 0.85rem; color: #ef4444; padding-right: 20px;">
         ${profileStatus.missingTasks.map(task => `<li>${task}</li>`).join('')}
        </ul>`
     : `<p style="margin-top: 10px; font-size: 0.9rem; color: #10b981;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-left: 4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> پروفایل شما کامل است!</p>`;
 
+  const dealsCount = AppStore.getAllDeals().filter(d => d.buyerId === AppStore.getActiveUserId()).length;
+
   content.innerHTML = `
     <h1 style="font-size: 1.8rem; margin-bottom: 1.5rem;">خلاصه فعالیت‌های خرید شما</h1>
-    
     <div style="background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
       <div style="flex-shrink: 0; text-align: center;">
         <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--color-primary) ${profileStatus.percentage}%, #e2e8f0 0); display: flex; align-items: center; justify-content: center;">
-          <div style="width: 65px; height: 65px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: var(--color-primary);">
-            ${profileStatus.percentage}%
-          </div>
+          <div style="width: 65px; height: 65px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: var(--color-primary);">${profileStatus.percentage}%</div>
         </div>
       </div>
       <div>
@@ -129,7 +172,6 @@ function loadDashboardTab() {
         <button class="btn btn-primary" onclick="document.querySelector('[data-tab=\\'settings\\']').click()">تکمیل پروفایل</button>
       </div>
     </div>
-
     <div class="panel-stats-grid">
       <div class="stat-card" style="border-bottom: 4px solid var(--color-primary);">
         <h3>استعلام‌های مستقیم</h3>
@@ -140,16 +182,371 @@ function loadDashboardTab() {
         <div class="stat-value" style="color: #10b981;">${currentSummary.tendersCount || 0}</div>
       </div>
       <div class="stat-card" style="border-bottom: 4px solid #f59e0b;">
-        <h3>پیشنهادات دریافت شده</h3>
-        <div class="stat-value" style="color: #f59e0b;">${currentSummary.proposalsCount || 0}</div>
+        <h3>معاملات در جریان</h3>
+        <div class="stat-value" style="color: #f59e0b;">${dealsCount}</div>
       </div>
-      <div class="stat-card" style="border-bottom: 4px solid #ef4444;">
-        <h3>محصولات نشان‌شده</h3>
-        <div class="stat-value" style="color: #ef4444;">${AppStore.getFavProducts().length}</div>
+      <div class="stat-card" style="border-bottom: 4px solid #8b5cf6;">
+        <h3>لیست کوتاه تأمین‌کنندگان</h3>
+        <div class="stat-value" style="color: #8b5cf6;">${AppStore.getSupplierShortlist().length}</div>
       </div>
     </div>
   `;
 }
+
+// ==========================================
+// 🌟 توابع ماژول پشتیبانی (Support System)
+// ==========================================
+
+window.loadSupportTab = async () => {
+    const content = document.getElementById('panel-content');
+    content.innerHTML = '<div style="text-align: center; padding: 3rem;">در حال دریافت سوابق تیکت‌ها...</div>';
+    
+    const tickets = await SupportService.getUserTickets(AppStore.getActiveUserId());
+    
+    content.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> سیستم پشتیبانی و تیکت‌ها</h2>
+            <button class="btn btn-primary" onclick="openNewTicketModal()">+ ثبت تیکت جدید</button>
+        </div>
+        <div class="panel-table-container">
+            <table class="panel-table">
+                <thead>
+                    <tr>
+                        <th>شناسه</th>
+                        <th>موضوع تیکت</th>
+                        <th>آخرین بروزرسانی</th>
+                        <th>وضعیت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tickets.length > 0 ? tickets.map(t => {
+                        let badge = t.status === 'open' ? '<span class="status-badge" style="background:#fef3c7; color:#d97706;">در انتظار پاسخ</span>' :
+                                    t.status === 'replied' ? '<span class="status-badge" style="background:#d1fae5; color:#059669;">پاسخ پشتیبانی</span>' :
+                                    '<span class="status-badge" style="background:#f1f5f9; color:#475569;">بسته شده</span>';
+                        return `
+                            <tr>
+                                <td style="font-family: monospace; color:#64748b; font-size:0.85rem;">#${t.id.split('-')[1]}</td>
+                                <td style="font-weight: 600;">${t.subject}</td>
+                                <td style="color: var(--color-text-muted);" dir="ltr">${new Date(t.updatedAt).toLocaleDateString('fa-IR')}</td>
+                                <td>${badge}</td>
+                                <td>
+                                    <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openTicketViewModal('${t.id}')">مشاهده گفتگو</button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('') : '<tr><td colspan="5" style="text-align:center; padding:2rem;">هیچ تیکت پشتیبانی ثبت نکرده‌اید.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    `;
+};
+
+window.openNewTicketModal = () => {
+    const modalHtml = `
+        <div id="new-ticket-modal" class="modal-overlay" style="z-index: 9999;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>ارسال تیکت جدید به پشتیبانی TradeCore</h3>
+                    <button class="btn-close" onclick="document.getElementById('new-ticket-modal').remove()">✕</button>
+                </div>
+                <div class="modal-body" style="text-align:right;">
+                    <label style="font-weight: 600; display:block; margin-bottom:5px;">موضوع تیکت *</label>
+                    <input type="text" id="ticket-subject" class="form-input" style="margin-bottom: 15px;" placeholder="مثلاً: مشکل در ثبت سفارش یا ارتقای پلن">
+                    
+                    <label style="font-weight: 600; display:block; margin-bottom:5px;">متن پیام *</label>
+                    <textarea id="ticket-message" class="form-input" rows="5" style="margin-bottom: 15px;" placeholder="پیام و توضیحات خود را کامل بنویسید..."></textarea>
+                    
+                    <button class="btn btn-primary btn-full" onclick="submitNewTicket(event)">ثبت و ارسال تیکت</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.submitNewTicket = async (event) => {
+    const subject = document.getElementById('ticket-subject').value.trim();
+    const message = document.getElementById('ticket-message').value.trim();
+    if(!subject || !message) return alert('لطفاً موضوع و متن پیام را به صورت کامل وارد کنید.');
+
+    event.target.textContent = 'در حال ارسال...';
+    event.target.disabled = true;
+
+    await SupportService.createTicket(AppStore.getActiveUserId(), subject, message);
+    document.getElementById('new-ticket-modal').remove();
+    loadSupportTab();
+};
+
+window.openTicketViewModal = async (ticketId) => {
+    const tickets = await SupportService.getUserTickets(AppStore.getActiveUserId());
+    const tkt = tickets.find(t => t.id === ticketId);
+    if(!tkt) return;
+
+    const msgsHtml = tkt.messages.map(m => {
+        const isMe = m.sender === 'user';
+        return `
+            <div style="display: flex; justify-content: ${isMe ? 'flex-start' : 'flex-end'}; margin-bottom: 15px;">
+                <div style="max-width: 85%; background: ${isMe ? '#eff6ff' : '#f8fafc'}; border: 1px solid ${isMe ? '#bfdbfe' : '#e2e8f0'}; padding: 10px 15px; border-radius: 8px;">
+                    <div style="font-size: 0.75rem; color: #64748b; margin-bottom: 5px; font-weight: bold;">${isMe ? 'شما' : 'تیم پشتیبانی TradeCore'}</div>
+                    <p style="margin: 0 0 5px 0; font-size: 0.95rem; line-height: 1.6; color: #1e293b;">${m.text}</p>
+                    <span style="font-size: 0.7rem; color: #94a3b8; display: block; text-align: ${isMe ? 'left' : 'right'};" dir="ltr">${m.date}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const modalHtml = `
+        <div id="view-ticket-modal" class="modal-overlay" style="z-index: 9999;">
+            <div class="modal-content" style="max-width: 600px; width: 95%;">
+                <div class="modal-header">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.1rem;">موضوع: ${tkt.subject}</h3>
+                        <span style="font-size: 0.8rem; color: #64748b;">وضعیت تیکت: ${tkt.status === 'closed' ? 'بسته شده' : 'باز'}</span>
+                    </div>
+                    <button class="btn-close" onclick="document.getElementById('view-ticket-modal').remove()">✕</button>
+                </div>
+                <div class="modal-body" style="padding: 0; background: #fdfdfd; text-align:right;">
+                    <div style="padding: 20px; max-height: 400px; min-height: 200px; overflow-y: auto;" id="ticket-chat-area">
+                        ${msgsHtml}
+                    </div>
+                    ${tkt.status !== 'closed' ? `
+                    <div style="padding: 15px 20px; border-top: 1px solid var(--color-border); background: white;">
+                        <textarea id="ticket-reply-msg" class="form-input" rows="2" placeholder="پاسخ جدید خود را بنویسید..." style="margin-bottom: 10px;"></textarea>
+                        <button class="btn btn-primary btn-full" onclick="replyTicketFunc('${tkt.id}', event)">ارسال پاسخ</button>
+                    </div>
+                    ` : `
+                    <div style="padding: 15px; text-align: center; background: #f1f5f9; color: #64748b; font-size: 0.9rem; border-top: 1px solid var(--color-border);">
+                        این تیکت بسته شده است و امکان ارسال پیام جدید وجود ندارد. در صورت نیاز تیکت جدید ثبت کنید.
+                    </div>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const area = document.getElementById('ticket-chat-area');
+    area.scrollTop = area.scrollHeight;
+};
+
+window.replyTicketFunc = async (ticketId, event) => {
+    const msg = document.getElementById('ticket-reply-msg').value.trim();
+    if(!msg) return;
+
+    event.target.textContent = 'در حال ارسال...';
+    event.target.disabled = true;
+
+    await SupportService.addReply(ticketId, msg, false);
+    document.getElementById('view-ticket-modal').remove();
+    openTicketViewModal(ticketId);
+    loadSupportTab();
+};
+
+// ==========================================
+// بقیه توابع (مانند قبل دست نخورده باقی ماندند)
+// ==========================================
+
+function loadDealsTab() {
+    const content = document.getElementById('panel-content');
+    const myDeals = AppStore.getAllDeals().filter(d => d.buyerId === AppStore.getActiveUserId());
+
+    content.innerHTML = `
+      <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">معاملات و توافقات من</h2>
+      <div class="panel-table-container">
+        <table class="panel-table">
+          <thead>
+            <tr>
+              <th>شناسه معامله</th>
+              <th>تأمین‌کننده</th>
+              <th>موضوع / کالا</th>
+              <th>تاریخ ثبت</th>
+              <th>وضعیت</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${myDeals.length > 0 ? myDeals.map(d => {
+              const sup = businesses.find(b => b.id === d.mainSupplierId);
+              return `
+              <tr>
+                <td style="font-family: monospace; color:#64748b;">#${d.id.toUpperCase()}</td>
+                <td style="font-weight: 600; color: var(--color-primary);">${sup ? sup.name : 'نامشخص'}</td>
+                <td>${d.title}</td>
+                <td style="color: var(--color-text-muted);" dir="ltr">${d.date.split(',')[0]}</td>
+                <td><span class="status-badge" style="background:#e0e7ff; color:#4338ca;">در حال مذاکره</span></td>
+                <td>
+                  <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="document.querySelector('[data-tab=\\'messages\\']').click()">چت و پیگیری</button>
+                </td>
+              </tr>
+            `}).join('') : '<tr><td colspan="6" style="text-align:center;">معامله‌ای ثبت نشده است</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+}
+
+function loadShortlistTab() {
+    const content = document.getElementById('panel-content');
+    const slIds = AppStore.getSupplierShortlist();
+    const slBizs = slIds.map(id => businesses.find(b => b.id === id)).filter(Boolean);
+
+    content.innerHTML = `
+      <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">لیست کوتاه مقایسه (Shortlist)</h2>
+      <p style="color: #64748b; margin-bottom: 2rem;">شما می‌توانید هنگام ثبت RFQ برای یک محصول، استعلام را مستقیماً برای شرکت‌های این لیست نیز پیامک کنید.</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+          ${slBizs.length > 0 ? slBizs.map(b => `
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; display: flex; align-items: center; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                  <img src="${b.logo}" style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #e2e8f0; object-fit: cover;">
+                  <div>
+                      <h4 style="font-size: 1rem; margin-bottom: 5px;">${b.name}</h4>
+                      <div style="display:flex; gap:10px;">
+                          <a href="business.html?id=${b.id}" style="font-size: 0.85rem; color: var(--color-primary); font-weight: bold;">مشاهده پروفایل</a>
+                          <span style="font-size: 0.85rem; color: #ef4444; cursor: pointer;" onclick="AppStore.toggleShortlist('${b.id}'); document.querySelector('[data-tab=\\'shortlist\\']').click();">حذف از لیست</span>
+                      </div>
+                  </div>
+              </div>
+          `).join('') : '<div style="grid-column: 1/-1; text-align:center; padding: 2rem; background:white; border-radius:8px; border:1px dashed #cbd5e1;">لیست کوتاه شما خالی است. از طریق شبکه تأمین‌کنندگان شرکت‌ها را اضافه کنید.</div>'}
+      </div>
+    `;
+}
+
+function loadNotificationsTab() {
+    const content = document.getElementById('panel-content');
+    const notifs = AppStore.getUserNotifications(AppStore.getActiveUserId());
+
+    content.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.5rem;">مرکز اعلان‌ها</h2>
+        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="alert('همه اعلان‌ها خوانده شدند')">علامت همه به عنوان خوانده شده</button>
+      </div>
+      <div style="background: white; border-radius: 12px; border: 1px solid var(--color-border); overflow: hidden;">
+        ${notifs.length > 0 ? notifs.map(n => `
+            <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: ${n.isRead ? 'white' : '#f8fafc'};">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="width: 10px; height: 10px; border-radius: 50%; background: ${n.isRead ? 'transparent' : '#3b82f6'};"></div>
+                    <div>
+                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">${n.title}</div>
+                        <div style="font-size: 0.8rem; color: #64748b;" dir="ltr">${n.date}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('') : '<div style="padding: 3rem; text-align: center; color: #64748b;">هیچ اعلانی ندارید.</div>'}
+      </div>
+    `;
+}
+
+async function loadMessagesTab() {
+    const content = document.getElementById('panel-content');
+    content.innerHTML = '<div style="text-align: center; padding: 3rem;">در حال همگام‌سازی چت‌ها...</div>';
+
+    const convs = await MessageService.getMyConversations();
+
+    let sidebarHtml = convs.map(c => `
+        <div style="padding: 15px; border-bottom: 1px solid #e2e8f0; cursor: pointer; background: ${currentActiveChatId === c.id ? '#eff6ff' : 'white'}; transition: 0.2s;" onclick="openChatView('${c.id}')" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='${currentActiveChatId === c.id ? '#eff6ff' : 'white'}'">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <img src="${c.otherUserLogo}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #cbd5e1;">
+                <div style="flex: 1; overflow: hidden;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #0f172a;">${c.otherUserName}</strong>
+                        ${c.unreadCount > 0 ? `<span style="background: #ef4444; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; justify-content: center; align-items: center;">${c.unreadCount}</span>` : ''}
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px;">${c.subject}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    if(!sidebarHtml) sidebarHtml = '<div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 0.9rem;">هنوز گفتگویی ایجاد نشده است.</div>';
+
+    content.innerHTML = `
+        <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">پیام‌ها و مذاکرات دمو</h2>
+        <div style="display: flex; height: calc(100vh - 220px); min-height: 500px; border: 1px solid var(--color-border); border-radius: 12px; background: white; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            
+            <div style="width: 320px; border-left: 1px solid var(--color-border); background: #f8fafc; display: flex; flex-direction: column;">
+                <div style="padding: 15px; background: white; border-bottom: 1px solid var(--color-border);">
+                    <input type="text" class="form-input" placeholder="جستجو در چت‌ها..." style="padding: 8px; font-size: 0.85rem; border-radius: 20px; background: #f1f5f9;">
+                </div>
+                <div style="flex: 1; overflow-y: auto;" id="chat-sidebar">
+                    ${sidebarHtml}
+                </div>
+            </div>
+
+            <div id="chat-body-container" style="flex: 1; display: flex; flex-direction: column; background: #fdfdfd;">
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #94a3b8; flex-direction: column; gap: 10px;">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                    برای مشاهده پیام‌ها، یک گفتگو را انتخاب کنید
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (!currentActiveChatId && convs.length > 0) {
+        currentActiveChatId = convs[0].id;
+    }
+    if (currentActiveChatId) window.openChatView(currentActiveChatId);
+}
+
+window.openChatView = async (convId) => {
+    currentActiveChatId = convId;
+    const convs = await MessageService.getMyConversations();
+    const conv = convs.find(c => c.id === convId);
+    if(!conv) return;
+
+    document.querySelectorAll('#chat-sidebar > div').forEach(item => item.style.backgroundColor = 'white');
+    event?.currentTarget && (event.currentTarget.style.backgroundColor = '#eff6ff');
+
+    const userId = AppStore.getActiveUserId();
+
+    const messagesHtml = conv.messages.map(m => {
+        const isMe = m.senderId === userId;
+        const time = new Date(m.timestamp).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
+        return `
+            <div style="display: flex; justify-content: ${isMe ? 'flex-start' : 'flex-end'}; margin-bottom: 15px;">
+                <div style="max-width: 70%; background: ${isMe ? '#e0f2fe' : 'white'}; border: 1px solid ${isMe ? '#bae6fd' : '#e2e8f0'}; padding: 10px 15px; border-radius: ${isMe ? '12px 12px 0 12px' : '12px 12px 12px 0'}; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                    <p style="margin: 0 0 5px 0; color: #1e293b; font-size: 0.95rem; line-height: 1.5;">${m.text}</p>
+                    <span style="font-size: 0.7rem; color: #94a3b8; display: block; text-align: ${isMe ? 'left' : 'right'};">${time}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const chatContainer = document.getElementById('chat-body-container');
+    chatContainer.innerHTML = `
+        <div style="padding: 15px 20px; background: white; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <img src="${conv.otherUserLogo}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #cbd5e1;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">${conv.otherUserName}</h3>
+                    <span style="font-size: 0.85rem; color: var(--color-primary); font-weight: 600;">${conv.subject}</span>
+                </div>
+            </div>
+            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="alert('پروفایل شرکت در تب جدید باز می‌شود')">مشاهده پروفایل</button>
+        </div>
+        
+        <div id="chat-messages-area" style="flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc;">
+            ${messagesHtml || '<div style="text-align: center; color: #94a3b8; margin-top: 2rem;">اولین پیام خود را ارسال کنید...</div>'}
+        </div>
+        
+        <div style="padding: 15px 20px; background: white; border-top: 1px solid var(--color-border); display: flex; gap: 10px;">
+            <button class="btn btn-outline" style="padding: 0 15px; border-color: #cbd5e1; color: #64748b;" title="ارسال فایل ضمیمه"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></button>
+            <input type="text" id="chat-input-msg" class="form-input" style="flex: 1; border-radius: 24px; padding-right: 20px;" placeholder="پیام خود را بنویسید..." onkeypress="if(event.key === 'Enter') sendDemoMessage('${conv.id}')">
+            <button class="btn btn-primary" style="border-radius: 24px; padding: 0 20px;" onclick="sendDemoMessage('${conv.id}')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> ارسال</button>
+        </div>
+    `;
+
+    const area = document.getElementById('chat-messages-area');
+    area.scrollTop = area.scrollHeight;
+};
+
+window.sendDemoMessage = async (convId) => {
+    const input = document.getElementById('chat-input-msg');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    input.value = '';
+    await MessageService.sendMessage(convId, text);
+    window.openChatView(convId); 
+};
 
 function loadRfqsTab() {
   const content = document.getElementById('panel-content');
@@ -169,7 +566,7 @@ function loadRfqsTab() {
         <tbody>
           ${currentSummary.rfqs.length > 0 ? currentSummary.rfqs.map(rfq => {
             let statusHtml = '';
-            if (rfq.status === 'pending') statusHtml = '<span class="status-badge status-pending"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg> در انتظار پاسخ</span>';
+            if (rfq.status === 'pending') statusHtml = '<span class="status-badge status-pending">در انتظار پاسخ</span>';
             else if (rfq.status === 'replied') statusHtml = '<span class="status-badge status-replied">پاسخ داده شده</span>';
             else if (rfq.status === 'in_negotiation') statusHtml = '<span class="status-badge" style="background:#e0e7ff; color:#4338ca;">در حال مذاکره</span>';
             
@@ -180,9 +577,7 @@ function loadRfqsTab() {
               <td style="color: var(--color-text-muted);">${rfq.date}</td>
               <td>${statusHtml}</td>
               <td>
-                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openViewModal('${rfq.id}')">
-                  مشاهده پرونده
-                </button>
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openViewModal('${rfq.id}')">مشاهده پرونده</button>
               </td>
             </tr>
           `}).join('') : '<tr><td colspan="5" style="text-align:center;">درخواستی ثبت نشده است</td></tr>'}
@@ -192,10 +587,70 @@ function loadRfqsTab() {
   `;
 }
 
+window.startRfqNegotiation = async (rfqId, btn) => {
+    btn.textContent = 'در حال ایجاد معامله...';
+    btn.disabled = true;
+    await BuyerService.startNegotiationForRfq(rfqId);
+    document.getElementById('view-modal').remove();
+    currentSummary = await BuyerService.getDashboardSummary();
+    alert('معامله با موفقیت ایجاد شد و چت روم مذاکره فعال گردید.');
+    document.querySelector('[data-tab="messages"]').click();
+};
+
+window.openViewModal = (rfqId) => {
+  const rfq = currentSummary.rfqs.find(r => r.id === rfqId);
+  if (!rfq) return;
+
+  const isReplied = rfq.status === 'replied' || rfq.status === 'in_negotiation';
+  const isNegotiating = rfq.status === 'in_negotiation';
+
+  const modalHtml = `
+    <div id="view-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>جزئیات استعلام برای: ${rfq.productName}</h3>
+          <button class="btn-close" onclick="document.getElementById('view-modal').remove()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        </div>
+        <div class="modal-body">
+          ${isNegotiating ? '<div style="background:#e0e7ff; color:#4338ca; padding:10px; text-align:center; border-radius:8px; margin-bottom:15px; font-size:0.9rem; font-weight:bold;">این درخواست در مرحله مذاکره قرار دارد</div>' : ''}
+          
+          <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--color-border);">
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">پیام ارسالی شما (${rfq.date}):</span>
+            <p style="margin-top: 0.5rem; line-height: 1.6;">${rfq.message}</p>
+          </div>
+
+          ${isReplied ? `
+            <div style="background: #ecfdf5; padding: 1rem; border-radius: var(--radius-md); border: 1px solid #a7f3d0;">
+              <span style="font-size: 0.8rem; color: #059669;">پاسخ ${rfq.supplierName} (${rfq.replyDate}):</span>
+              <p style="margin-top: 0.5rem; line-height: 1.6; color: var(--color-text-main);">${rfq.reply}</p>
+            </div>
+            
+            <div style="margin-top: 1.5rem; border-top: 1px dashed var(--color-border); padding-top: 1rem;">
+              ${!isNegotiating ? `
+                <button class="btn btn-primary btn-full" style="padding: 10px; font-size: 0.95rem; margin-bottom: 10px;" onclick="startRfqNegotiation('${rfq.id}', this)">
+                  تایید پاسخ و ایجاد میز مذاکره (چت)
+                </button>
+              ` : `
+                <button class="btn btn-primary btn-full" style="padding: 10px; font-size: 0.95rem;" onclick="document.getElementById('view-modal').remove(); document.querySelector('[data-tab=\\'messages\\']').click();">
+                  ورود به چت روم مذاکره
+                </button>
+              `}
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 1rem; color: var(--color-text-muted); font-size: 0.9rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md);">
+              شرکت ${rfq.supplierName} هنوز پاسخی ارسال نکرده است.
+            </div>
+          `}
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
 window.loadTendersTab = async () => {
     const content = document.getElementById('panel-content');
     content.innerHTML = '<div style="text-align: center; padding: 3rem;">در حال دریافت اطلاعات...</div>';
-    
     const tenders = await BuyerService.getBuyerTenders();
     
     content.innerHTML = `
@@ -232,7 +687,7 @@ window.loadTendersTab = async () => {
                 </td>
                 <td>
                   <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="viewProposals('${t.id}')">بررسی پرونده</button>
-                  ${t.status === 'active' ? `<button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick='openTenderModal(${JSON.stringify(t)})'>ویرایش</button>` : ''}
+                  ${t.status === 'active' ? `<button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick='openTenderModal(${JSON.stringify(t).replace(/"/g, '&quot;')})'>ویرایش</button>` : ''}
                   <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; color: #ef4444; border-color: #ef4444;" onclick="deleteTender('${t.id}')">حذف</button>
                 </td>
               </tr>
@@ -243,95 +698,8 @@ window.loadTendersTab = async () => {
     `;
 };
 
-window.loadPitchesTab = async () => {
-    const content = document.getElementById('panel-content');
-    content.innerHTML = '<div style="text-align: center; padding: 3rem;">در حال بارگذاری پیشنهادات...</div>';
-    
-    const pitches = await BuyerService.getIncomingServicePitches();
-    
-    content.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> پیشنهادات خدمات جانبی دریافت شده</h2>
-      </div>
-
-      <div class="panel-table-container">
-        <table class="panel-table">
-          <thead>
-            <tr>
-              <th>ارائه‌دهنده خدمات</th>
-              <th>مربوط به معامله</th>
-              <th>نوع خدمات پیشنهادی</th>
-              <th>تاریخ</th>
-              <th>عملیات</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${pitches.length > 0 ? pitches.map(p => `
-              <tr>
-                <td style="font-weight: 600; color: var(--color-primary);">${p.supplierName}</td>
-                <td>${p.dealTitle}</td>
-                <td><span style="background: #fdf4ff; color: #a21caf; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid #f5d0fe;">${p.type}</span></td>
-                <td style="color: var(--color-text-muted);">${p.date}</td>
-                <td>
-                  <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem; background-color: #8b5cf6; border-color: #8b5cf6;" onclick="viewPitchDetail('${p.id}', '${p.supplierName}', '${p.message}')">بررسی و مذاکره</button>
-                </td>
-              </tr>
-            `).join('') : '<tr><td colspan="5" style="text-align:center;">هیچ پیشنهاد خدماتی برای معاملات شما ارسال نشده است.</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    `;
-};
-
-window.viewPitchDetail = (pitchId, supplierName, message) => {
-    const canViewContact = AppStore.checkFeatureAccess('view_contact');
-
-    const modalHtml = `
-      <div id="view-pitch-modal" class="modal-overlay">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>پیشنهاد همکاری از: ${supplierName}</h3>
-            <button class="btn-close" onclick="document.getElementById('view-pitch-modal').remove()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-          </div>
-          <div class="modal-body">
-            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--color-border); margin-bottom: 1.5rem;">
-                <p style="color: var(--color-text-main); line-height: 1.6; font-size: 0.95rem; margin:0;">${message || 'بدون متن'}</p>
-            </div>
-            
-            <div style="border-top: 1px dashed var(--color-border); padding-top: 1rem;">
-              <p style="font-size: 0.85rem; color: var(--color-text-muted); text-align: center; margin-bottom: 1rem;">اطلاعات تماس جهت مذاکره در خصوص خدمات:</p>
-              <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="btn btn-primary" style="flex: 1; padding: 8px; font-size: 0.9rem;" onclick="${canViewContact ? "alert('سیستم چت امن به زودی فعال می‌شود.')" : "showUpgradePaywall('ارسال پیام خصوصی')"}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> چت مستقیم</button>
-                <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 0.9rem;" onclick="${canViewContact ? "alert('ایمیل شرکت: info@serviceprovider.com')" : "showUpgradePaywall('مشاهده ایمیل شرکت‌ها')"}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg> ایمیل</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-};
-
-window.addTenderCatRow = () => {
-    const container = document.getElementById('t-cat-container');
-    const firstSelectHtml = container.querySelector('.tender-cat-select').innerHTML; 
-    const row = document.createElement('div');
-    row.className = 'cat-row';
-    row.style = "display: flex; gap: 10px; margin-bottom: 10px;";
-    row.innerHTML = `
-        <select class="form-input tender-cat-select" style="flex: 1;">
-            ${firstSelectHtml}
-        </select>
-        <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px; display: inline-flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-    `;
-    container.appendChild(row);
-};
-
 window.openTenderModal = async (existingData = null) => {
     const categories = await CategoryService.getAllCategories();
-    
     const selectedCats = existingData ? (Array.isArray(existingData.categoryId) ? existingData.categoryId : [existingData.categoryId]) : [''];
 
     let catRowsHtml = '';
@@ -339,9 +707,7 @@ window.openTenderModal = async (existingData = null) => {
         const optionsHtml = categories.map(c => `<option value="${c.id}" ${catId === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
         catRowsHtml += `
             <div class="cat-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <select class="form-input tender-cat-select" style="flex: 1;">
-                    ${optionsHtml}
-                </select>
+                <select class="form-input tender-cat-select" style="flex: 1;">${optionsHtml}</select>
                 ${index === 0 ? 
                     `<button disabled class="btn btn-outline" style="opacity:0.5; padding:0 15px; cursor:not-allowed; display: inline-flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : 
                     `<button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px; display: inline-flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>`
@@ -359,30 +725,38 @@ window.openTenderModal = async (existingData = null) => {
           </div>
           <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
             <input type="hidden" id="t-id" value="${existingData ? existingData.id : ''}">
-            
             <label style="font-weight: 600; display:block; margin-bottom:5px;">عنوان درخواست *</label>
             <input type="text" id="t-title" class="form-input" value="${existingData ? existingData.title : ''}" style="margin-bottom: 15px;">
-            
             <label style="font-weight: 600; display:block; margin-bottom:5px;">دسته‌بندی‌های مرتبط *</label>
-            <div id="t-cat-container">
-                ${catRowsHtml}
-            </div>
+            <div id="t-cat-container">${catRowsHtml}</div>
             <button class="btn btn-outline" style="margin-bottom: 15px; border-style: dashed; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="addTenderCatRow()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن دسته‌بندی دیگر
             </button>
-            
             <label style="font-weight: 600; display:block; margin-bottom:5px;">مقدار مورد نیاز *</label>
             <input type="text" id="t-qty" class="form-input" value="${existingData ? existingData.quantity : ''}" style="margin-bottom: 15px;">
-            
             <label style="font-weight: 600; display:block; margin-bottom:5px;">توضیحات تکمیلی و شرایط</label>
             <textarea id="t-desc" class="form-input" rows="4">${existingData ? existingData.description : ''}</textarea>
-            
             <button class="btn btn-primary btn-full" style="margin-top: 1.5rem;" onclick="saveTender(event)">${existingData ? 'ذخیره تغییرات' : 'انتشار مناقصه'}</button>
           </div>
         </div>
       </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.addTenderCatRow = () => {
+    const container = document.getElementById('t-cat-container');
+    const firstSelectHtml = container.querySelector('.tender-cat-select').innerHTML; 
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.style = "display: flex; gap: 10px; margin-bottom: 10px;";
+    row.innerHTML = `
+        <select class="form-input tender-cat-select" style="flex: 1;">${firstSelectHtml}</select>
+        <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px; display: inline-flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    `;
+    container.appendChild(row);
 };
 
 window.saveTender = async (event) => {
@@ -399,7 +773,6 @@ window.saveTender = async (event) => {
     };
 
     if(!data.title || !data.quantity || uniqueCategories.length === 0) return;
-    
     event.target.textContent = 'در حال ذخیره...';
     event.target.disabled = true;
     
@@ -415,16 +788,6 @@ window.deleteTender = async (id) => {
         currentSummary = await BuyerService.getDashboardSummary(); 
         loadTendersTab();
     }
-};
-
-window.acceptProposal = async (tenderId, proposalId, btn) => {
-    btn.textContent = 'در حال پردازش...';
-    btn.disabled = true;
-    await BuyerService.acceptTenderProposal(tenderId, proposalId);
-    document.getElementById('props-modal').remove();
-    currentSummary = await BuyerService.getDashboardSummary();
-    loadTendersTab();
-    alert('مذاکره با موفقیت شروع شد. پیمانکاران خدماتی مطلع خواهند شد.');
 };
 
 window.viewProposals = async (tenderId) => {
@@ -464,134 +827,83 @@ window.viewProposals = async (tenderId) => {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
-async function loadFavoritesTab(type) {
-  const content = document.getElementById('panel-content');
-  content.innerHTML = '<div style="text-align: center; padding: 3rem;">در حال دریافت اطلاعات...</div>';
-
-  if (type === 'products') {
-    const favIds = AppStore.getFavProducts();
-    
-    const favoriteProducts = [];
-    for(let id of favIds) {
-        const p = await ProductService.getProductById(id);
-        if(p) favoriteProducts.push(p);
-    }
-
-    content.innerHTML = `
-      <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> محصولات ذخیره شده (${favoriteProducts.length})</h2>
-      ${favoriteProducts.length === 0 ? `
-        <div style="background: var(--color-surface); padding: 3rem; border-radius: 8px; border: 1px dashed var(--color-border); text-align: center;">
-          <p style="color: var(--color-text-muted);">هنوز محصولی را نشان نکرده‌اید.</p>
-        </div>
-      ` : `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem;">
-            ${favoriteProducts.map(p => `
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <img src="${p.image}" alt="${p.name}" style="width: 100%; height: 140px; object-fit: cover;">
-                    <div style="padding: 1rem;">
-                        <h4 style="font-size: 0.95rem; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</h4>
-                        <a href="product.html?id=${p.id}" class="btn btn-outline btn-full" style="font-size: 0.8rem; padding: 6px;">مشاهده و استعلام</a>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-      `}
-    `;
-  } else {
-    const favIds = AppStore.getFavBusinesses();
-    
-    const favoriteBusinesses = favIds.map(id => businesses.find(b => b.id === id)).filter(Boolean);
-
-    content.innerHTML = `
-      <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg> تأمین‌کنندگان نشان‌شده (${favoriteBusinesses.length})</h2>
-      ${favoriteBusinesses.length === 0 ? `
-        <div style="background: var(--color-surface); padding: 3rem; border-radius: 8px; border: 1px dashed var(--color-border); text-align: center;">
-          <p style="color: var(--color-text-muted);">هنوز شرکتی را نشان نکرده‌اید.</p>
-        </div>
-      ` : `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
-            ${favoriteBusinesses.map(b => `
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; display: flex; align-items: center; gap: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <img src="${b.logo}" style="width: 60px; height: 60px; border-radius: 8px; border: 1px solid #e2e8f0; object-fit: cover;">
-                    <div>
-                        <h4 style="font-size: 1rem; margin-bottom: 5px;">${b.name}</h4>
-                        <a href="business.html?id=${b.id}" style="font-size: 0.85rem; color: var(--color-primary); font-weight: bold;">مشاهده پروفایل ➔</a>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-      `}
-    `;
-  }
-}
-
-window.startRfqNegotiation = async (rfqId, btn) => {
+window.acceptProposal = async (tenderId, proposalId, btn) => {
     btn.textContent = 'در حال پردازش...';
     btn.disabled = true;
-    await BuyerService.startNegotiationForRfq(rfqId);
-    document.getElementById('view-modal').remove();
+    await BuyerService.acceptTenderProposal(tenderId, proposalId);
+    document.getElementById('props-modal').remove();
     currentSummary = await BuyerService.getDashboardSummary();
-    loadRfqsTab();
+    loadTendersTab();
+    alert('مذاکره با موفقیت شروع شد. پیمانکاران خدماتی مطلع خواهند شد.');
+    document.querySelector('[data-tab="messages"]').click();
 };
 
-window.openViewModal = (rfqId) => {
-  const rfq = currentSummary.rfqs.find(r => r.id === rfqId);
-  if (!rfq) return;
+window.loadPitchesTab = async () => {
+    const content = document.getElementById('panel-content');
+    content.innerHTML = '<div style="text-align: center; padding: 3rem;">در حال بارگذاری پیشنهادات...</div>';
+    const pitches = await BuyerService.getIncomingServicePitches();
+    
+    content.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> پیشنهادات خدمات جانبی دریافت شده</h2>
+      </div>
+      <div class="panel-table-container">
+        <table class="panel-table">
+          <thead>
+            <tr>
+              <th>ارائه‌دهنده خدمات</th>
+              <th>مربوط به معامله</th>
+              <th>نوع خدمات پیشنهادی</th>
+              <th>تاریخ</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pitches.length > 0 ? pitches.map(p => `
+              <tr>
+                <td style="font-weight: 600; color: var(--color-primary);">${p.supplierName}</td>
+                <td>${p.dealTitle}</td>
+                <td><span style="background: #fdf4ff; color: #a21caf; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid #f5d0fe;">${p.type}</span></td>
+                <td style="color: var(--color-text-muted);">${p.date}</td>
+                <td>
+                  <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem; background-color: #8b5cf6; border-color: #8b5cf6;" onclick="viewPitchDetail('${p.id}', '${p.supplierName}', '${p.message}')">بررسی و مذاکره</button>
+                </td>
+              </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align:center;">هیچ پیشنهاد خدماتی برای معاملات شما ارسال نشده است.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    `;
+};
 
-  const isReplied = rfq.status === 'replied' || rfq.status === 'in_negotiation';
-  const isNegotiating = rfq.status === 'in_negotiation';
-
-  const canViewContact = AppStore.checkFeatureAccess('view_contact');
-
-  const modalHtml = `
-    <div id="view-modal" class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>جزئیات استعلام برای: ${rfq.productName}</h3>
-          <button class="btn-close" onclick="document.getElementById('view-modal').remove()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-        </div>
-        <div class="modal-body">
-          ${isNegotiating ? '<div style="background:#e0e7ff; color:#4338ca; padding:10px; text-align:center; border-radius:8px; margin-bottom:15px; font-size:0.9rem; font-weight:bold;">این درخواست در مرحله مذاکره قرار دارد</div>' : ''}
-          
-          <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--color-border);">
-            <span style="font-size: 0.8rem; color: var(--color-text-muted);">پیام ارسالی شما (${rfq.date}):</span>
-            <p style="margin-top: 0.5rem; line-height: 1.6;">${rfq.message}</p>
+window.viewPitchDetail = (pitchId, supplierName, message) => {
+    const canViewContact = AppStore.checkFeatureAccess('view_contact');
+    const modalHtml = `
+      <div id="view-pitch-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>پیشنهاد همکاری از: ${supplierName}</h3>
+            <button class="btn-close" onclick="document.getElementById('view-pitch-modal').remove()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
           </div>
-
-          ${isReplied ? `
-            <div style="background: #ecfdf5; padding: 1rem; border-radius: var(--radius-md); border: 1px solid #a7f3d0;">
-              <span style="font-size: 0.8rem; color: #059669;">پاسخ ${rfq.supplierName} (${rfq.replyDate}):</span>
-              <p style="margin-top: 0.5rem; line-height: 1.6; color: var(--color-text-main);">${rfq.reply}</p>
+          <div class="modal-body">
+            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid var(--color-border); margin-bottom: 1.5rem;">
+                <p style="color: var(--color-text-main); line-height: 1.6; font-size: 0.95rem; margin:0;">${message || 'بدون متن'}</p>
             </div>
-            
-            <div style="margin-top: 1.5rem; border-top: 1px dashed var(--color-border); padding-top: 1rem;">
-              ${!isNegotiating ? `
-                <button class="btn btn-primary btn-full" style="padding: 10px; font-size: 0.95rem; margin-bottom: 10px;" onclick="startRfqNegotiation('${rfq.id}', this)">
-                  تایید پاسخ و شروع مذاکره
-                </button>
-              ` : `
-                <p style="font-size: 0.85rem; color: var(--color-text-muted); text-align: center; margin-bottom: 1rem;">اطلاعات تماس تأمین‌کننده جهت ادامه مذاکره:</p>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                  <button class="btn btn-primary" style="flex: 1; padding: 8px; font-size: 0.9rem;" onclick="${canViewContact ? "alert('سیستم چت امن به زودی فعال می‌شود.')" : "showUpgradePaywall('ارسال پیام خصوصی')"}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> چت مستقیم</button>
-                  <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 0.9rem;" onclick="${canViewContact ? "alert('ایمیل شرکت: info@company.com')" : "showUpgradePaywall('مشاهده ایمیل شرکت‌ها')"}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg> ایمیل</button>
-                  <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 0.9rem;" onclick="${canViewContact ? "alert('تلفن تماس: 021-0000000')" : "showUpgradePaywall('مشاهده شماره تلفن')"}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> تماس</button>
-                </div>
+            <div style="border-top: 1px dashed var(--color-border); padding-top: 1rem;">
+              <p style="font-size: 0.85rem; color: var(--color-text-muted); text-align: center; margin-bottom: 1rem;">اطلاعات تماس جهت مذاکره در خصوص خدمات:</p>
+              <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-primary" style="flex: 1; padding: 8px; font-size: 0.9rem;" onclick="${canViewContact ? "alert('سیستم چت امن به زودی فعال می‌شود.')" : "showUpgradePaywall('ارسال پیام خصوصی')"}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> چت مستقیم</button>
+                <button class="btn btn-outline" style="flex: 1; padding: 8px; font-size: 0.9rem;" onclick="${canViewContact ? "alert('ایمیل شرکت: info@serviceprovider.com')" : "showUpgradePaywall('مشاهده ایمیل شرکت‌ها')"}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg> ایمیل</button>
               </div>
-            `}
-          ` : `
-            <div style="text-align: center; padding: 1rem; color: var(--color-text-muted); font-size: 0.9rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md);">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg> شرکت ${rfq.supplierName} هنوز پاسخی ارسال نکرده است.
             </div>
-          `}
+          </div>
         </div>
       </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
 window.currentProfileStep = 1;
-
 window.showProfileStep = (step) => {
   document.querySelectorAll('.profile-step-content').forEach(el => el.style.display = 'none');
   document.getElementById(`step-${step}`).style.display = 'block';
@@ -611,12 +923,8 @@ window.showProfileStep = (step) => {
   window.currentProfileStep = step;
 };
 
-window.nextProfileStep = () => {
-  if(window.currentProfileStep < 3) window.showProfileStep(window.currentProfileStep + 1);
-};
-window.prevProfileStep = () => {
-  if(window.currentProfileStep > 1) window.showProfileStep(window.currentProfileStep - 1);
-};
+window.nextProfileStep = () => { if(window.currentProfileStep < 3) window.showProfileStep(window.currentProfileStep + 1); };
+window.prevProfileStep = () => { if(window.currentProfileStep > 1) window.showProfileStep(window.currentProfileStep - 1); };
 
 window.toggleServiceFields = () => {
     const isChecked = document.getElementById('role-service').checked;
@@ -646,7 +954,7 @@ function loadProfileTab() {
   `;
 
   content.innerHTML = style + `
-    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> پروفایل تجاری و هویتی شرکت</h2>
+    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> پروفایل تجاری و هویتی شرکت</h2>
     
     <div class="step-container">
       <div class="step-indicator" data-title="اطلاعات پایه">اطلاعات پایه</div>

@@ -707,3 +707,111 @@
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
+/* =========================================
+   ۱۱. استایل‌های کاروسل‌های ویژه (Featured B2B)
+   ========================================= */
+
+   .featured-carousel-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    margin-top: 1.5rem;
+  }
+  
+  /* حل قطعی مشکل اسکرول افقی */
+  .carousel-track {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding: 1rem 0 2rem 0;
+    scroll-behavior: smooth;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .carousel-track::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  /* کارت شرکت: مربعی‌تر، عرض کمتر و ارتفاع بیشتر */
+  .track-single-row {
+    flex-direction: row;
+  }
+  
+  /* محصولات: شبکه دقیق ۳ ردیفه با اسکرول افقی */
+  .track-multi-row {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-columns: 280px; /* عرض ثابت هر محصول */
+    gap: 1.5rem;
+  }
+  
+  /* استایل کارت شرکت */
+  .featured-company-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column; /* چیدمان عمودی (عکس بالا، متن پایین) */
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    transition: 0.3s;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    width: 220px; /* عرض کمتر */
+    min-height: 220px; /* ارتفاع بیشتر */
+    flex-shrink: 0;
+  }
+  
+  .featured-company-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px -3px rgba(30, 64, 175, 0.1);
+    border-color: var(--color-primary);
+  }
+  
+  .featured-company-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-primary), #38bdf8);
+    opacity: 0;
+    transition: 0.3s;
+  }
+  
+  .featured-company-card:hover::before {
+    opacity: 1;
+  }
+  
+  .carousel-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    color: var(--color-text-main);
+    transition: 0.2s;
+  }
+  
+  .carousel-nav-btn:hover {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+  
+  .carousel-prev { right: 0px; }
+  .carousel-next { left: 0px; }

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ورود و ثبت‌نام | TradeCore B2B</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    body { 
+      background-color: #f8fafc; 
+      display: flex; 
+      flex-direction: column; 
+      min-height: 100vh; 
+    }
+    .auth-container { 
+      max-width: 480px; 
+      margin: 3rem auto 5rem; 
+      width: 100%; 
+      padding: 0 1rem; 
+      flex: 1; 
+    }
+    .auth-card { 
+      background: white; 
+      border-radius: 16px; 
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+      border: 1px solid var(--color-border); 
+      overflow: hidden; 
+    }
+    .auth-tabs { 
+      display: flex; 
+      border-bottom: 1px solid var(--color-border); 
+      background: #f1f5f9; 
+    }
+    .auth-tab { 
+      flex: 1; 
+      text-align: center; 
+      padding: 1.2rem; 
+      font-weight: 600; 
+      cursor: pointer; 
+      color: #64748b; 
+      transition: 0.3s; 
+      border-bottom: 3px solid transparent; 
+    }
+    .auth-tab.active { 
+      color: var(--color-primary); 
+      border-bottom-color: var(--color-primary); 
+      background: white; 
+    }
+    .auth-body { 
+      padding: 2.5rem; 
+    }
+    .auth-form { 
+      display: none; 
+      animation: fadeIn 0.3s ease; 
+    }
+    .auth-form.active { 
+      display: block; 
+    }
+    .form-group { 
+      margin-bottom: 1.5rem; 
+    }
+    .form-group label { 
+      display: block; 
+      font-weight: 600; 
+      margin-bottom: 0.5rem; 
+      color: #1e293b; 
+      font-size: 0.9rem; 
+    }
+    .form-group input { 
+      width: 100%; 
+      padding: 0.8rem 1rem; 
+      border: 1px solid #cbd5e1; 
+      border-radius: 8px; 
+      font-family: inherit; 
+      font-size: 1rem; 
+      outline: none; 
+      transition: 0.2s; 
+    }
+    .form-group input:focus { 
+      border-color: var(--color-primary); 
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1); 
+    }
+    .role-options {
+      margin-top: 1.5rem; 
+      margin-bottom: 1.5rem; 
+      background: #f8fafc; 
+      padding: 1.2rem; 
+      border-radius: 8px; 
+      border: 1px dashed #cbd5e1;
+    }
+    .role-checkbox {
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      cursor: pointer; 
+      font-size: 0.95rem; 
+      color: #334155;
+      margin-bottom: 12px;
+    }
+    .role-checkbox:last-child {
+      margin-bottom: 0;
+    }
+    @keyframes fadeIn { 
+      from { opacity: 0; transform: translateY(5px); } 
+      to { opacity: 1; transform: translateY(0); } 
+    }
+  </style>
+</head>
+<body>
+
+  <!-- هدر ساده برای صفحه ورود -->
+  <div style="text-align: center; margin-top: 3rem;">
+    <a href="index.html" style="display: inline-flex; align-items: center; gap: 10px; text-decoration: none;">
+      <div style="background: linear-gradient(135deg, var(--color-primary), #1e3a8a); color: white; width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.3rem; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);">TC</div>
+      <span style="font-size: 1.8rem; font-weight: 900; color: #0f172a; letter-spacing: -0.5px;">TradeCore <span style="color: var(--color-primary);">B2B</span></span>
+    </a>
+  </div>
+
+  <main class="auth-container">
+    <div class="auth-card">
+      
+      <!-- تب‌های تغییر وضعیت -->
+      <div class="auth-tabs">
+        <div class="auth-tab active" data-target="login">ورود به پنل</div>
+        <div class="auth-tab" data-target="register">ثبت‌نام کسب‌وکار</div>
+      </div>
+
+      <div class="auth-body">
+        
+        <!-- ======================= -->
+        <!-- فرم ورود (Login)        -->
+        <!-- ======================= -->
+        <form id="login-form" class="auth-form active">
+          <div class="form-group">
+            <label>ایمیل یا شماره موبایل</label>
+            <input type="text" id="login-identifier" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label>رمز عبور</label>
+            <input type="password" id="login-password" dir="ltr">
+          </div>
+          <button type="submit" class="btn btn-primary btn-full" style="padding: 0.9rem; font-size: 1.05rem;">ورود به حساب</button>
+          
+          <!-- بخش مخصوص دمو برای پرزنت سریع -->
+          <div style="margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem; text-align: center;">
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; font-weight: bold;">میانبر دسترسی (مخصوص نسخه دمو)</p>
+            <select id="demo-login-select" style="width: 100%; padding: 0.8rem; border: 1px solid var(--color-border); border-radius: 8px; font-family: inherit; margin-bottom: 1rem; outline: none; background-color: #f8fafc; font-weight: 600;">
+                <!-- توسط JS پر می‌شود -->
+            </select>
+            <button type="button" id="btn-demo-login" class="btn btn-outline btn-full" style="padding: 0.7rem; font-size: 0.95rem;">ورود سریع با اکانت انتخابی</button>
+          </div>
+        </form>
+
+        <!-- ======================= -->
+        <!-- فرم ثبت‌نام (Register)    -->
+        <!-- ======================= -->
+        <form id="register-form" class="auth-form">
+          <div class="form-group">
+            <label>نام رسمی شرکت</label>
+            <input type="text" id="reg-company">
+          </div>
+          <div class="form-group">
+            <label>ایمیل سازمانی</label>
+            <input type="email" id="reg-email" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label>شماره تماس (مدیر اکانت)</label>
+            <input type="text" id="reg-phone" dir="ltr">
+          </div>
+          <div class="form-group">
+            <label>رمز عبور</label>
+            <input type="password" id="reg-password" dir="ltr">
+          </div>
+          
+          <div class="role-options">
+            <label style="font-weight: bold; display:block; margin-bottom:15px; color: var(--color-primary); font-size: 0.95rem;">نقش شما در پلتفرم (حداقل یک مورد)</label>
+            <label class="role-checkbox"><input type="checkbox" id="reg-role-buyer" checked> خریدار محصولات و تجهیزات</label>
+            <label class="role-checkbox"><input type="checkbox" id="reg-role-supplier"> تأمین‌کننده کالا و محصولات</label>
+            <label class="role-checkbox"><input type="checkbox" id="reg-role-service"> ارائه‌دهنده خدمات (لجستیک، بیمه، پیمانکاری)</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" style="padding: 0.9rem; font-size: 1.05rem; background: #10b981; border-color: #10b981;">ثبت‌نام و ایجاد حساب</button>
+        </form>
+
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="js/pages/auth.js"></script>
+</body>
+</html>

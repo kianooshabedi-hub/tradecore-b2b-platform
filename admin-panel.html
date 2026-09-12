@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدیریت کل سیستم | TradeCore Super Admin</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
+  <style>
+    /* Admin Specific Styles */
+    :root {
+      --admin-sidebar-bg: #0f172a;
+      --admin-sidebar-hover: #1e293b;
+      --admin-sidebar-text: #94a3b8;
+      --admin-sidebar-active: #38bdf8;
+      --admin-topbar-bg: #ffffff;
+      --admin-bg: #f1f5f9;
+    }
+    body { background-color: var(--admin-bg); display: flex; height: 100vh; overflow: hidden; }
+    
+    /* Sidebar */
+    .admin-sidebar { width: 280px; background-color: var(--admin-sidebar-bg); color: var(--admin-sidebar-text); display: flex; flex-direction: column; overflow-y: auto; border-left: 1px solid #1e293b; flex-shrink: 0; }
+    .admin-logo { padding: 1.5rem; font-size: 1.5rem; font-weight: 900; color: white; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 10px; }
+    .admin-menu { padding: 1rem 0; flex: 1; }
+    .admin-menu-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; padding: 0.5rem 1.5rem; margin-top: 1rem; font-weight: 700; }
+    .admin-menu a { display: flex; align-items: center; gap: 12px; padding: 0.75rem 1.5rem; color: var(--admin-sidebar-text); text-decoration: none; font-size: 0.95rem; font-weight: 500; transition: 0.2s; border-right: 3px solid transparent; }
+    .admin-menu a:hover { background-color: var(--admin-sidebar-hover); color: white; }
+    .admin-menu a.active { background-color: var(--admin-sidebar-hover); color: white; border-right-color: var(--admin-sidebar-active); font-weight: 700; }
+    
+    /* Topbar */
+    .admin-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .admin-topbar { height: 70px; background: var(--admin-topbar-bg); border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; padding: 0 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02); z-index: 10; flex-shrink: 0;}
+    .admin-search { display: flex; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0 1rem; width: 400px; height: 40px; }
+    .admin-search input { border: none; background: transparent; width: 100%; outline: none; font-size: 0.9rem; padding-right: 10px;}
+    .admin-actions { display: flex; align-items: center; gap: 1.5rem; }
+    .admin-bell { position: relative; cursor: pointer; color: #64748b; }
+    .admin-bell-badge { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 0.65rem; font-weight: bold; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid white; }
+    
+    /* Content Area */
+    .admin-content { padding: 2rem; overflow-y: auto; flex: 1; }
+    .stat-card { background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid var(--color-border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 1rem; }
+    .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    
+    /* Tables & Badges */
+    .admin-table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); overflow: hidden; }
+    .admin-table-toolbar { padding: 1rem 1.5rem; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center; background: #fdfdfd; }
+    .badge-success { background: #d1fae5; color: #059669; }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .badge-danger { background: #fee2e2; color: #dc2626; }
+    .badge-gray { background: #f1f5f9; color: #475569; }
+    
+    /* Modals */
+    .admin-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; }
+    .admin-modal.show { display: flex; animation: fadeIn 0.2s; }
+    .admin-modal-content { background: white; width: 400px; border-radius: 16px; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-logo">
+      <div style="background: linear-gradient(135deg, #38bdf8, #2563eb); color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">TC</div>
+      Super Admin
+    </div>
+    <div class="admin-menu">
+      <a href="#" class="active" data-tab="dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg> داشبورد مدیریتی</a>
+      
+      <div class="admin-menu-title">مدیریت کاربران و شرکت‌ها</div>
+      <a href="#" data-tab="companies"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> لیست شرکت‌ها</a>
+      <a href="#" data-tab="approvals"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> تأیید شرکت‌ها <span class="badge-warning" style="padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; margin-right: auto; color: #b45309;">نیاز به بررسی</span></a>
+      
+      <div class="admin-menu-title">مارکت‌پلیس</div>
+      <a href="#" data-tab="products"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> محصولات پلتفرم</a>
+      <a href="#" data-tab="categories"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> دسته‌بندی‌ها</a>
+      <!-- 🌟 اضافه شدن تب مقالات -->
+      <a href="#" data-tab="articles"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> مدیریت مقالات</a>
+      
+      <div class="admin-menu-title">عملیات و مالی</div>
+      <a href="#" data-tab="transactions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> معاملات و RFQها</a>
+      <a href="#" data-tab="subscriptions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> اشتراک‌ها و لایسنس‌ها</a>
+      
+      <div class="admin-menu-title">نظارت سیستم</div>
+      <a href="#" data-tab="audit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg> Activity Log (لاگ سیستم)</a>
+      <a href="#" data-tab="settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> تنظیمات پلتفرم</a>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="admin-main">
+    
+    <!-- Topbar -->
+    <header class="admin-topbar">
+      <div class="admin-search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="جستجوی سراسری (شرکت، محصول، شناسه تراکنش)...">
+      </div>
+      <div class="admin-actions">
+        <div class="admin-bell" onclick="alert('مرکز اعلان‌های ادمین در آینده پیاده‌سازی می‌شود.')">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span class="admin-bell-badge">3</span>
+        </div>
+        <div style="width: 1px; height: 30px; background: var(--color-border);"></div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="text-align: left;">
+            <div style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">Super Admin</div>
+            <div style="font-size: 0.75rem; color: #64748b;">دسترسی کل</div>
+          </div>
+          <div style="background: #38bdf8; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">SA</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dynamic Content Area -->
+    <div id="admin-content" class="admin-content">
+      <div style="text-align: center; padding: 4rem;">در حال راه‌اندازی سیستم مدیریت مرکزی...</div>
+    </div>
+  </main>
+
+  <!-- Global Confirmation Modal -->
+  <div id="admin-modal" class="admin-modal">
+    <div class="admin-modal-content">
+      <div id="modal-icon" style="margin-bottom: 1rem;"></div>
+      <h2 id="modal-title" style="font-size: 1.4rem; color: #0f172a; margin-bottom: 0.5rem;">تایید عملیات</h2>
+      <p id="modal-desc" style="color: #64748b; font-size: 0.95rem; margin-bottom: 2rem;"></p>
+      <input type="text" id="modal-input" class="form-input" placeholder="دلیل (اختیاری)" style="display: none; margin-bottom: 1.5rem; text-align: right;">
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-outline" style="flex: 1;" onclick="closeAdminModal()">انصراف</button>
+        <button id="modal-confirm-btn" class="btn btn-primary" style="flex: 1;">تایید نهایی</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/pages/adminPanel.js"></script>
+</body>
+</html>
