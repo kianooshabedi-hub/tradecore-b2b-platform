@@ -107,14 +107,21 @@ async function initSellerPanel() {
 
   const navLinks = document.querySelectorAll('.panel-nav a');
   navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
+    link.addEventListener('click', async (e) => {
       e.preventDefault();
       navLinks.forEach(l => l.classList.remove('active'));
       const targetLink = e.target.closest('a');
       if(targetLink) targetLink.classList.add('active');
       
       const tab = targetLink ? targetLink.getAttribute('data-tab') : null;
-      if (tab === 'inbox') { hasViewedInbox = true; updateSidebarBadges(); loadInboxTab(); }
+      if (tab === 'inbox') { 
+          hasViewedInbox = true; 
+          SellerService.markInboxAsRead(); // 🌟 خوانده شدن پیام‌ها ثبت شد
+          currentSummary.newRfqsCount = 0; 
+          currentSummary.newDealsCount = 0;
+          updateSidebarBadges(); 
+          loadInboxTab(); 
+      }
       else if (tab === 'dashboard') loadDashboardTab();
       else if (tab === 'my-products') loadProductsTab();
       else if (tab === 'my-articles') loadMyArticlesTab(); 
@@ -372,25 +379,70 @@ function loadDealsTab() {
 }
 
 function loadNotificationsTab() {
-    const content = document.getElementById('panel-content');
-    const notifs = AppStore.getUserNotifications(AppStore.getActiveUserId());
-    content.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2 style="font-size: 1.5rem;">مرکز اعلان‌ها</h2>
-        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="alert('همه اعلان‌ها خوانده شدند')">علامت همه به عنوان خوانده شده</button>
-      </div>
-      <div style="background: white; border-radius: 12px; border: 1px solid var(--color-border); overflow: hidden;">
-        ${notifs.length > 0 ? notifs.map(n => `
-            <div style="padding: 1.2rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 15px; background: ${n.isRead ? 'white' : '#f8fafc'};">
-                <div style="width: 10px; height: 10px; border-radius: 50%; background: ${n.isRead ? 'transparent' : '#3b82f6'};"></div>
-                <div>
-                    <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">${n.title}</div>
-                    <div style="font-size: 0.8rem; color: #64748b;" dir="ltr">${n.date}</div>
-                </div>
-            </div>
-        `).join('') : '<div style="padding: 3rem; text-align: center; color: #64748b;">هیچ اعلانی ندارید.</div>'}
-      </div>
-    `;
+  const content = document.getElementById('panel-content');
+  const notifs = AppStore.getUserNotifications(AppStore.getActiveUserId());
+
+  const icons = {
+      info: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+      success: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+      alert: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
+      message: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>`
+  };
+
+  const styles = `
+      <style>
+          .notif-card { display: flex; align-items: flex-start; gap: 1.2rem; padding: 1.5rem; border-bottom: 1px solid var(--color-border); transition: 0.2s; background: white; }
+          .notif-card:hover { background: #f8fafc; }
+          .notif-card.unread { background: #f0f9ff; border-right: 4px solid var(--color-primary); padding-right: calc(1.5rem - 4px); }
+          .notif-card:last-child { border-bottom: none; }
+          .notif-icon { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+          .notif-icon.info { background: #e2e8f0; color: #475569; }
+          .notif-icon.success { background: #d1fae5; color: #059669; }
+          .notif-icon.alert { background: #fee2e2; color: #dc2626; }
+          .notif-icon.message { background: #dbeafe; color: #2563eb; }
+          .notif-content { flex-grow: 1; min-width: 0; text-align: right; }
+          .notif-title { font-weight: 700; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px; line-height: 1.6; word-wrap: break-word; }
+          .notif-time { font-size: 0.8rem; color: #64748b; display: inline-flex; align-items: center; gap: 6px; background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-family: monospace; }
+          .notif-new-badge { background: var(--color-primary); color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; font-weight: bold; margin-right: 8px; vertical-align: baseline; }
+      </style>
+  `;
+
+  content.innerHTML = styles + `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg> مرکز اعلان‌ها</h2>
+      ${notifs.length > 0 ? `<button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="alert('تمام اعلان‌ها به عنوان خوانده‌شده علامت‌گذاری شدند.'); loadNotificationsTab();">✔ علامت خوانده شده</button>` : ''}
+    </div>
+    
+    <div style="background: white; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow: hidden;">
+      ${notifs.length > 0 ? notifs.map(n => {
+          const typeClass = n.type || 'info';
+          const icon = icons[typeClass] || icons.info;
+          
+          // 🌟 تبدیل هوشمند لینک به اکشنِ کلیک روی تب‌های سایدبار 🌟
+          const targetTab = (n.link && n.link !== '#') ? n.link.replace('#', '') : '';
+          const clickAction = targetTab ? `const t = document.querySelector('[data-tab=\\'${targetTab}\\']'); if(t) t.click(); else alert('بخش مورد نظر در این پنل یافت نشد.');` : '';
+
+          return `
+          <div class="notif-card ${n.isRead ? '' : 'unread'}">
+              <div class="notif-icon ${typeClass}">${icon}</div>
+              <div class="notif-content">
+                  <div class="notif-title" dir="auto">${n.title} ${!n.isRead ? '<span class="notif-new-badge">جدید</span>' : ''}</div>
+                  <div class="notif-time" dir="ltr">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      ${n.date}
+                  </div>
+              </div>
+              ${targetTab ? `<button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; flex-shrink: 0;" onclick="${clickAction}">بررسی</button>` : ''}
+          </div>
+      `}).join('') : `
+          <div style="padding: 5rem 2rem; text-align: center; color: #64748b;">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <h3 style="font-size: 1.1rem; color: #475569; margin-bottom: 5px;">هیچ اعلانی ندارید</h3>
+              <p style="font-size: 0.95rem;">تمام رویدادهای مهم حساب کاربری شما در اینجا نمایش داده خواهند شد.</p>
+          </div>
+      `}
+    </div>
+  `;
 }
 
 async function loadMessagesTab() {
@@ -445,55 +497,93 @@ async function loadMessagesTab() {
 }
 
 window.openChatView = async (convId) => {
-    currentActiveChatId = convId;
-    const convs = await MessageService.getMyConversations();
-    const conv = convs.find(c => c.id === convId);
-    if(!conv) return;
+  currentActiveChatId = convId;
+  
+  const userId = AppStore.getActiveUserId();
+  
+  // 🌟 ۳. رفع مشکل سین نشدن پیام‌ها: تغییر وضعیت پیام‌ها به خوانده شده در دیتابیس
+  const rawConvs = AppStore.getAllConversations();
+  const rawConv = rawConvs.find(c => c.id === convId);
+  let hasUnread = false;
 
-    document.querySelectorAll('#chat-sidebar > div').forEach(item => item.style.backgroundColor = 'white');
-    event?.currentTarget && (event.currentTarget.style.backgroundColor = '#eff6ff');
+  if (rawConv) {
+      rawConv.messages.forEach(m => {
+          if (m.senderId !== userId && !m.isRead) {
+              m.isRead = true;
+              hasUnread = true;
+          }
+      });
+      if (hasUnread) {
+          AppStore.saveConversations(rawConvs);
+      }
+  }
 
-    const userId = AppStore.getActiveUserId();
+  // گرفتن دیتای پردازش شده پس از آپدیت
+  const convs = await MessageService.getMyConversations();
+  const conv = convs.find(c => c.id === convId);
+  if(!conv) return;
 
-    const messagesHtml = conv.messages.map(m => {
-        const isMe = m.senderId === userId;
-        const time = new Date(m.timestamp).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
-        return `
-            <div style="display: flex; justify-content: ${isMe ? 'flex-start' : 'flex-end'}; margin-bottom: 15px;">
-                <div style="max-width: 70%; background: ${isMe ? '#e0f2fe' : 'white'}; border: 1px solid ${isMe ? '#bae6fd' : '#e2e8f0'}; padding: 10px 15px; border-radius: ${isMe ? '12px 12px 0 12px' : '12px 12px 12px 0'}; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                    <p style="margin: 0 0 5px 0; color: #1e293b; font-size: 0.95rem; line-height: 1.5;">${m.text}</p>
-                    <span style="font-size: 0.7rem; color: #94a3b8; display: block; text-align: ${isMe ? 'left' : 'right'};">${time}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
+  // آپدیت ظاهر سایدبار چت‌ها (تغییر رنگ بک‌گراند و حذف بج قرمز)
+  document.querySelectorAll('#chat-sidebar > div').forEach(item => {
+      item.style.backgroundColor = 'white';
+      if(item.getAttribute('onclick').includes(convId)) {
+          item.style.backgroundColor = '#eff6ff';
+          // حذف ویژوال بج قرمز پیام‌های نخوانده
+          const unreadBadge = item.querySelector('span[style*="background: #ef4444"]');
+          if (unreadBadge) unreadBadge.remove();
+      }
+  });
 
-    const chatContainer = document.getElementById('chat-body-container');
-    chatContainer.innerHTML = `
-        <div style="padding: 15px 20px; background: white; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <img src="${conv.otherUserLogo}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #cbd5e1;">
-                <div>
-                    <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">${conv.otherUserName}</h3>
-                    <span style="font-size: 0.85rem; color: var(--color-primary); font-weight: 600;">${conv.subject}</span>
-                </div>
-            </div>
-            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="alert('پروفایل شرکت در تب جدید باز می‌شود')">مشاهده پروفایل</button>
-        </div>
-        
-        <div id="chat-messages-area" style="flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc;">
-            ${messagesHtml || '<div style="text-align: center; color: #94a3b8; margin-top: 2rem;">اولین پیام خود را ارسال کنید...</div>'}
-        </div>
-        
-        <div style="padding: 15px 20px; background: white; border-top: 1px solid var(--color-border); display: flex; gap: 10px;">
-            <button class="btn btn-outline" style="padding: 0 15px; border-color: #cbd5e1; color: #64748b;" title="ارسال فایل ضمیمه"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></button>
-            <input type="text" id="chat-input-msg" class="form-input" style="flex: 1; border-radius: 24px; padding-right: 20px;" placeholder="پیام خود را بنویسید..." onkeypress="if(event.key === 'Enter') sendDemoMessage('${conv.id}')">
-            <button class="btn btn-primary" style="border-radius: 24px; padding: 0 20px;" onclick="sendDemoMessage('${conv.id}')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> ارسال</button>
-        </div>
-    `;
+  // 🌟 ۱. رفع مشکل مشاهده پروفایل: پیدا کردن آیدی طرف مقابل برای لینک واقعی
+  const otherUserId = conv.participants.find(p => p !== userId);
 
-    const area = document.getElementById('chat-messages-area');
-    area.scrollTop = area.scrollHeight;
+  const messagesHtml = conv.messages.map(m => {
+      const isMe = m.senderId === userId;
+      const time = new Date(m.timestamp).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'});
+      return `
+          <div style="display: flex; justify-content: ${isMe ? 'flex-start' : 'flex-end'}; margin-bottom: 15px;">
+              <div style="max-width: 70%; background: ${isMe ? '#e0f2fe' : 'white'}; border: 1px solid ${isMe ? '#bae6fd' : '#e2e8f0'}; padding: 10px 15px; border-radius: ${isMe ? '12px 12px 0 12px' : '12px 12px 12px 0'}; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                  <p style="margin: 0 0 5px 0; color: #1e293b; font-size: 0.95rem; line-height: 1.5;">${m.text}</p>
+                  <span style="font-size: 0.7rem; color: #94a3b8; display: block; text-align: ${isMe ? 'left' : 'right'};">${time}</span>
+              </div>
+          </div>
+      `;
+  }).join('');
+
+  const chatContainer = document.getElementById('chat-body-container');
+  chatContainer.innerHTML = `
+      <div style="padding: 15px 20px; background: white; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+              <img src="${conv.otherUserLogo}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #cbd5e1;">
+              <div>
+                  <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">${conv.otherUserName}</h3>
+                  <span style="font-size: 0.85rem; color: var(--color-primary); font-weight: 600;">${conv.subject}</span>
+              </div>
+          </div>
+          <!-- تبدیل به لینک واقعی برای پروفایل شرکت -->
+          <a href="business.html?id=${otherUserId}" target="_blank" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none;">مشاهده پروفایل</a>
+      </div>
+      
+      <div id="chat-messages-area" style="flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc;">
+          ${messagesHtml || '<div style="text-align: center; color: #94a3b8; margin-top: 2rem;">اولین پیام خود را ارسال کنید...</div>'}
+      </div>
+      
+      <div style="padding: 15px 20px; background: white; border-top: 1px solid var(--color-border); display: flex; gap: 10px; align-items: center;">
+          <!-- 🌟 ۲. رفع مشکل آپلود فایل: اتصال دکمه به input file مخفی -->
+          <button class="btn btn-outline" style="padding: 0 15px; height: 40px; border-color: #cbd5e1; color: #64748b;" title="ارسال فایل ضمیمه" onclick="document.getElementById('chat-file-input').click()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+          </button>
+          <input type="file" id="chat-file-input" style="display: none;" onchange="if(this.files.length) alert('فایل «' + this.files[0].name + '» آماده ارسال است. (آپلود واقعی در بک‌اند انجام می‌شود)')">
+          
+          <input type="text" id="chat-input-msg" class="form-input" style="flex: 1; border-radius: 24px; padding-right: 20px; height: 40px; margin: 0;" placeholder="پیام خود را بنویسید..." onkeypress="if(event.key === 'Enter') sendDemoMessage('${conv.id}')">
+          <button class="btn btn-primary" style="border-radius: 24px; padding: 0 20px; height: 40px;" onclick="sendDemoMessage('${conv.id}')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> ارسال
+          </button>
+      </div>
+  `;
+
+  const area = document.getElementById('chat-messages-area');
+  area.scrollTop = area.scrollHeight;
 };
 
 window.sendDemoMessage = async (convId) => {
@@ -523,16 +613,13 @@ window.loadInboxTab = async () => {
   const relevantTenders = await SellerService.getRelevantTenders();
   const serviceDeals = await SellerService.getServiceOpportunities();
 
-  const isServiceProvider = currentProfile.roles.includes('service_provider');
-  const isFreeTier = currentProfile.subscriptionTier === 'free';
-
   const itemsPerPage = 10;
   let displayItems = [];
   let totalPages = 1;
   let currentPage = 1;
 
   if (currentInboxTab === 'direct') {
-      const rfqs = currentSummary.rfqs;
+      const rfqs = currentSummary.rfqs || [];
       totalPages = Math.ceil(rfqs.length / itemsPerPage) || 1;
       currentPage = currentDirectPage;
       const start = (currentPage - 1) * itemsPerPage;
@@ -553,19 +640,17 @@ window.loadInboxTab = async () => {
   if (totalPages > 1) {
       paginationHTML = '<div style="display: flex; justify-content: center; gap: 8px; margin-top: 1.5rem;">';
       for (let i = 1; i <= totalPages; i++) {
-          paginationHTML += `<button class="btn ${i === currentPage ? 'btn-primary' : 'btn-outline'}" style="padding: 5px 12px;" onclick="changeInboxPage(${i})">${i}</button>`;
+          paginationHTML += `<button class="btn ${i === currentPage ? 'btn-primary' : 'btn-outline'}" style="padding: 5px 12px;" onclick="window.changeInboxPage(${i})">${i}</button>`;
       }
       paginationHTML += '</div>';
   }
 
+  // 🌟 اسامی دقیق تب‌ها و نمایش دائمی رادار
   const tabButtonsHtml = `
     <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-        <button class="btn ${currentInboxTab === 'direct' ? 'btn-primary' : 'btn-outline'}" style="border: none; box-shadow: none;" onclick="switchInboxTab('direct')">استعلام‌ها و پیام‌ها</button>
-        <button class="btn ${currentInboxTab === 'tenders' ? 'btn-primary' : 'btn-outline'}" style="border: none; box-shadow: none;" onclick="switchInboxTab('tenders')">فرصت‌های پیمانکاری و مناقصات</button>
-        ${isServiceProvider ? `<button class="btn ${currentInboxTab === 'radar' ? 'btn-primary' : 'btn-outline'}" style="border: none; box-shadow: none;" onclick="switchInboxTab('radar')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            رادار معاملات (فرصت خدمات)
-        </button>` : ''}
+        <button class="btn ${currentInboxTab === 'direct' ? 'btn-primary' : 'btn-outline'}" style="border: none; box-shadow: none;" onclick="window.switchInboxTab('direct')">استعلام‌ها</button>
+        <button class="btn ${currentInboxTab === 'tenders' ? 'btn-primary' : 'btn-outline'}" style="border: none; box-shadow: none;" onclick="window.switchInboxTab('tenders')">مناقصات</button>
+        <button class="btn ${currentInboxTab === 'radar' ? 'btn-primary' : 'btn-outline'}" style="border: none; box-shadow: none;" onclick="window.switchInboxTab('radar')">رادار معاملات و خدمات</button>
     </div>
   `;
 
@@ -595,12 +680,12 @@ window.loadInboxTab = async () => {
                     </span>
                   </td>
                   <td>
-                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="openReplyModal('${rfq.id}')">
+                    <button class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="window.openReplyModal('${rfq.id}')">
                       ${rfq.status === 'pending' ? 'خواندن و پاسخ' : 'مشاهده پرونده'}
                     </button>
                   </td>
                 </tr>
-              `).join('') : '<tr><td colspan="5" style="text-align:center;">پیام مستقیم جدیدی ندارید</td></tr>'}
+              `).join('') : '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: #64748b;">استعلام یا پیام جدیدی در این بخش وجود ندارد.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -636,35 +721,27 @@ window.loadInboxTab = async () => {
                   </td>
                   <td>
                     ${hasProposed ? 
-                        `<button class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;" onclick='openViewMyProposalModal(${JSON.stringify(t).replace(/"/g, '&quot;')})'>مشاهده پیشنهاد من</button>` : 
-                        `<button class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem; background-color: #10b981; border-color: #10b981;" onclick="${AppStore.checkFeatureAccess('send_message') ? `openSubmitProposalModal(${JSON.stringify(t).replace(/"/g, '&quot;')})` : `showUpgradePaywall('ارسال پروپوزال مناقصه')`}">ارسال پیشنهاد / اعلام آمادگی</button>`
+                        `<button class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;" onclick='window.openViewMyProposalModal(${JSON.stringify(t).replace(/"/g, '&quot;')})'>مشاهده پیشنهاد من</button>` : 
+                        `<button class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem; background-color: #10b981; border-color: #10b981;" onclick="window.openSubmitProposalModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">ارسال پیشنهاد / اعلام آمادگی</button>`
                     }
                   </td>
                 </tr>
-              `}).join('') : '<tr><td colspan="6" style="text-align:center;">فرصت مرتبطی یافت نشد</td></tr>'}
+              `}).join('') : '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #64748b;">مناقصه جدیدی برای نمایش وجود ندارد.</td></tr>'}
             </tbody>
           </table>
         </div>
       `;
   } else {
+      // 🌟 Radar Tab: تمامی محدودیت‌ها پاک شد و فروشنده کاملاً مخفی شد
       tableHtml = `
-        <div class="panel-table-container" style="position: relative;">
-          ${isFreeTier && displayItems.length > 0 ? `
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); backdrop-filter: blur(4px);">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d946ef" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              <h3 style="color: #1e293b; margin-bottom: 5px;">دسترسی محدود</h3>
-              <p style="color: #475569; font-size: 0.9rem; margin-bottom: 15px;">برای مشاهده نام شرکت‌های در حال مذاکره و ارسال پیشنهاد خدمات، اشتراک خود را ارتقا دهید.</p>
-              <button class="btn btn-primary" style="background:#d946ef; border-color:#d946ef;" onclick="showUpgradePaywall('رادار هوشمند معاملات')">ارتقا به نسخه Premium</button>
-            </div>
-          ` : ''}
-
+        <div class="panel-table-container">
           <table class="panel-table">
             <thead>
               <tr>
-                <th>طرفین معامله (خریدار - فروشنده)</th>
+                <th>مشتری (خریدار)</th>
                 <th>موضوع معامله (کالا/پروژه)</th>
                 <th>حجم / مقیاس</th>
-                <th style="white-space: nowrap; width: 140px;">وضعیت</th>
+                <th style="white-space: nowrap; width: 140px;">وضعیت شما</th>
                 <th>عملیات خدمات</th>
               </tr>
             </thead>
@@ -672,14 +749,8 @@ window.loadInboxTab = async () => {
               ${displayItems.length > 0 ? displayItems.map(deal => {
                 const hasPitched = deal.pitches && deal.pitches.some(p => p.supplierId === currentProfile.id);
                 return `
-                <tr style="${isFreeTier ? 'filter: blur(2px); user-select: none;' : ''}">
-                  <td>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span style="font-weight:600; color:var(--color-primary);">${deal.buyerName}</span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                      <span style="font-weight:600; color:#334155;">${deal.supplierName}</span>
-                    </div>
-                  </td>
+                <tr>
+                  <td style="font-weight:600; color:var(--color-primary);">${deal.buyerName}</td>
                   <td style="font-weight:bold;">${deal.title}</td>
                   <td>${deal.quantity || 'توافقی'}</td>
                   <td style="white-space: nowrap;">
@@ -690,12 +761,12 @@ window.loadInboxTab = async () => {
                   </td>
                   <td>
                     ${hasPitched ? 
-                        `<button class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;" onclick="viewMyPitch('${deal.id}')">مشاهده پیشنهاد من</button>` : 
-                        `<button class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem; background-color: #8b5cf6; border-color: #8b5cf6;" onclick="${isFreeTier ? '' : `openPitchModal('${deal.id}')`}">ارسال پیشنهاد (Pitch)</button>`
+                        `<button class="btn btn-outline" style="padding: 4px 12px; font-size: 0.8rem;" onclick="window.viewMyPitch('${deal.id}')">مشاهده پیشنهاد من</button>` : 
+                        `<button class="btn btn-primary" style="padding: 4px 12px; font-size: 0.8rem; background-color: #8b5cf6; border-color: #8b5cf6;" onclick="window.openPitchModal('${deal.id}')">ارسال پیشنهاد (Pitch)</button>`
                     }
                   </td>
                 </tr>
-              `}).join('') : '<tr><td colspan="5" style="text-align:center;">در حال حاضر معامله فعالی در رادار وجود ندارد</td></tr>'}
+              `}).join('') : '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: #64748b;">فرصتی برای خدمات/معاملات در جریان یافت نشد.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -994,8 +1065,8 @@ async function loadProductsTab() {
               <td><span style="background: #f1f5f9; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; color: #475569;">${p.itemType === 'service' ? 'خدمات' : 'کالا'}</span></td>
               <td style="color: var(--color-text-muted);">${p.categoryName || 'دسته‌بندی'}</td>
               <td>
-                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> ویرایش</button>
-                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; color: #ef4444; border-color: #ef4444; margin-right: 5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> حذف</button>
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" onclick="window.editProductFunc('${p.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> ویرایش</button>
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem; color: #ef4444; border-color: #ef4444; margin-right: 5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;" onclick="window.deleteProductFunc('${p.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> حذف</button>
               </td>
             </tr>
           `).join('') : '<tr><td colspan="5" style="text-align:center;">محصولی برای نمایش وجود ندارد</td></tr>'}
@@ -1005,6 +1076,69 @@ async function loadProductsTab() {
     ${paginationHTML}
   `;
 }
+
+// 🌟 توابع جدید حذف و ویرایش سریع 🌟
+window.deleteProductFunc = async (productId) => {
+    if(confirm('آیا از حذف دائم این آیتم اطمینان دارید؟')) {
+        await ProductService.deleteProduct(productId);
+        loadProductsTab();
+    }
+};
+
+window.editProductFunc = async (productId) => {
+    const prod = await ProductService.getProductById(productId);
+    if (!prod) return;
+    
+    // باز کردن فرم ثبت آیتم جدید با تغییرات ظاهری (برای ویرایش)
+    window.loadAddItemForm(prod.itemType || 'goods');
+    
+    // استفاده از تایم اوت برای اطمینان از رندر شدن DOM
+    setTimeout(() => {
+        const headerTitle = document.querySelector('#panel-content h2');
+        if (headerTitle) headerTitle.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> ویرایش: ${prod.name}`;
+        
+        const inputsStep1 = document.querySelectorAll('#prod-step-1 .form-input');
+        if(inputsStep1.length > 0) inputsStep1[0].value = prod.name;
+        
+        const inputsStep2 = document.querySelectorAll('#prod-step-2 .form-input');
+        if(inputsStep2.length > 0) inputsStep2[0].value = prod.shortDescription || '';
+        
+        // تغییر دکمه ذخیره در تب آخر (مرحله ۵)
+        const saveBtnGroup = document.querySelector('#prod-step-5 .btn-primary').parentElement;
+        if (saveBtnGroup) {
+            saveBtnGroup.innerHTML = `
+                <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="loadProductsTab()">لغو ویرایش</button>
+                <button class="btn btn-primary" style="background:#10b981; border-color:#10b981; display: inline-flex; align-items: center; gap: 6px;" onclick="window.saveEditedProduct('${prod.id}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ثبت تغییرات</button>
+            `;
+        }
+    }, 50);
+};
+
+window.saveEditedProduct = async (productId) => {
+    const inputsStep1 = document.querySelectorAll('#prod-step-1 .form-input');
+    const inputsStep2 = document.querySelectorAll('#prod-step-2 .form-input');
+    
+    const newName = inputsStep1.length > 0 ? inputsStep1[0].value : '';
+    const newShortDesc = inputsStep2.length > 0 ? inputsStep2[0].value : '';
+    
+    if (!newName) {
+        alert('لطفاً عنوان را وارد کنید.');
+        return;
+    }
+
+    const btn = event.target.closest('button');
+    const origText = btn.innerHTML;
+    btn.textContent = 'در حال ذخیره...';
+    btn.disabled = true;
+
+    await ProductService.updateProductMinimal(productId, { name: newName, shortDescription: newShortDesc });
+    
+    alert('تغییرات محصول با موفقیت ذخیره شد.');
+    loadProductsTab();
+};
+
+// 🌟 اضافه کردن این خط برای دسترسی دکمه‌های بازگشت به تابع لود محصولات 🌟
+window.loadProductsTab = loadProductsTab;
 
 window.loadItemTypeSelection = () => {
     const canAddItem = AppStore.checkFeatureAccess('add_item');
@@ -1017,7 +1151,8 @@ window.loadItemTypeSelection = () => {
     content.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
             <h2 style="font-size: 1.5rem;">انتخاب نوع آیتم</h2>
-            <button class="btn btn-outline" onclick="loadProductsTab()">انصراف و بازگشت</button>
+            <!-- 🌟 اصلاح دکمه بازگشت در اینجا 🌟 -->
+            <button class="btn btn-outline" onclick="window.loadProductsTab()">انصراف و بازگشت</button>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 800px; margin: 0 auto; padding-top: 2rem;">
             
@@ -1074,126 +1209,437 @@ window.addTechSpecRow = () => {
   `;
   container.appendChild(row);
 };
+// ==========================================
+// 🌟 سیستم پیشرفته ثبت کالا و خدمات (Wizard)
+// ==========================================
+
+window.currentProdStep = 1;
+window.currentAddingItemType = 'goods';
 
 window.loadAddItemForm = (type) => {
-  currentAddingItemType = type;
+  window.currentAddingItemType = type;
   const isService = type === 'service';
   const content = document.getElementById('panel-content');
   
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-      <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> ${isService ? 'ثبت خدمات جدید' : 'ثبت کالای جدید'}</h2>
-      <button class="btn btn-outline" onclick="loadProductsTab()" style="display: inline-flex; align-items: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> انصراف و بازگشت</button>
+      <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> ${isService ? 'ثبت خدمات B2B جدید' : 'ثبت کالای صنعتی جدید'}</h2>
+      <button class="btn btn-outline" onclick="window.loadProductsTab()" style="display: inline-flex; align-items: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> انصراف و بازگشت</button>
     </div>
     
-    <div class="step-container" style="display: flex; justify-content: space-between; margin-bottom: 2rem; background: var(--color-surface); padding: 10px; border-radius: 8px; border: 1px solid var(--color-border);">
-      <div class="step-indicator prod-step-indicator" data-title="پایه">پایه</div>
-      <div class="step-indicator prod-step-indicator" data-title="شرح کامل">شرح کامل</div>
-      <div class="step-indicator prod-step-indicator" data-title="${isService ? 'ویژگی‌های سرویس' : 'فنی'}">${isService ? 'ویژگی‌های سرویس' : 'فنی'}</div>
-      <div class="step-indicator prod-step-indicator" data-title="مجوزها">مجوزها</div>
-      <div class="step-indicator prod-step-indicator" data-title="قرارداد و مالی">قرارداد و مالی</div>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; background: white; padding: 10px; border-radius: 8px; border: 1px solid var(--color-border);">
+      <div class="step-indicator prod-step-indicator" style="flex: 1; text-align: center; padding: 12px 10px; font-weight: 600; font-size: 0.95rem; color: #94a3b8; cursor: pointer; transition: 0.3s;" data-title="پایه">پایه</div>
+      <div class="step-indicator prod-step-indicator" style="flex: 1; text-align: center; padding: 12px 10px; font-weight: 600; font-size: 0.95rem; color: #94a3b8; cursor: pointer; transition: 0.3s;" data-title="معرفی و مدیا">معرفی و مدیا</div>
+      <div class="step-indicator prod-step-indicator" style="flex: 1; text-align: center; padding: 12px 10px; font-weight: 600; font-size: 0.95rem; color: #94a3b8; cursor: pointer; transition: 0.3s;" data-title="${isService ? 'ویژگی‌های سرویس' : 'مشخصات فنی'}">${isService ? 'ویژگی‌های سرویس' : 'مشخصات فنی'}</div>
+      <div class="step-indicator prod-step-indicator" style="flex: 1; text-align: center; padding: 12px 10px; font-weight: 600; font-size: 0.95rem; color: #94a3b8; cursor: pointer; transition: 0.3s;" data-title="مجوزها">مجوزها</div>
+      <div class="step-indicator prod-step-indicator" style="flex: 1; text-align: center; padding: 12px 10px; font-weight: 600; font-size: 0.95rem; color: #94a3b8; cursor: pointer; transition: 0.3s;" data-title="تجاری و مالی">تجاری و مالی</div>
     </div>
 
     <div style="background: white; padding: 2rem; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
       
-      <div id="prod-step-1" class="prod-step-content">
-        <h3 style="margin-bottom: 1.5rem;">۱. اطلاعات پایه ${isService ? 'خدمات' : 'محصول'}</h3>
+      <!-- STEP 1: Base Info -->
+      <div id="prod-step-1" class="prod-step-content" style="display: none;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-primary);">۱. اطلاعات پایه ${isService ? 'خدمات' : 'محصول'}</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">عنوان ${isService ? 'خدمات' : 'محصول'} *</label><input type="text" class="form-input"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">عنوان انگلیسی</label><input type="text" class="form-input"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">دسته‌بندی مرتبط</label><select class="form-input"><option>روانکارها</option><option>برق و الکترونیک</option><option>لجستیک و حمل</option><option>بیمه و بازرسی</option><option>خدمات اجرای پروژه‌ها</option></select></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام ${isService ? 'خدمات' : 'محصول'} (فارسی) *</label><input type="text" id="item-name" class="form-input" placeholder="مثال: موتور الکتریکی سه فاز..."></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام انگلیسی (English Name)</label><input type="text" id="item-en-name" class="form-input" dir="ltr" placeholder="3-Phase Electric Motor..."></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">دسته‌بندی اصلی *</label>
+            <select id="item-category" class="form-input">
+              <option value="">انتخاب کنید...</option>
+              <option value="cat_machinery">ماشین‌آلات و تجهیزات</option>
+              <option value="cat_materials">مواد اولیه و شیمیایی</option>
+              <option value="cat_electrical">برق و الکترونیک</option>
+              <option value="cat_logistics">خدمات لجستیک و حمل</option>
+            </select>
+          </div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">زیردسته</label><input type="text" id="item-subcategory" class="form-input" placeholder="مثال: الکتروموتورها"></div>
           
           ${isService ? `
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">محدوده جغرافیایی تحت پوشش</label><input type="text" class="form-input"></div>
-            <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">بنر یا تصویر نماینده خدمات</label><button class="btn btn-outline" style="width:100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> آپلود بنر/تصویر</button></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">محدوده جغرافیایی ارائه خدمت</label><input type="text" id="item-geo" class="form-input" placeholder="ایران، خاورمیانه، جهانی..."></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نوع ارائه خدمت</label>
+                <select id="item-service-type" class="form-input">
+                    <option value="remote">آنلاین / ریموت</option>
+                    <option value="onsite">حضوری در سایت مشتری</option>
+                    <option value="hybrid">ترکیبی</option>
+                </select>
+            </div>
+            <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">صنایع قابل ارائه خدمت (با کاما جدا کنید)</label><input type="text" id="item-industries" class="form-input" placeholder="نفت و گاز، پتروشیمی، فولاد..."></div>
           ` : `
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">برند</label><input type="text" class="form-input"></div>
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کد محصول / مدل</label><input type="text" class="form-input"></div>
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کشور سازنده</label><input type="text" class="form-input"></div>
-            <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">تصویر اصلی محصول</label><button class="btn btn-outline" style="width:100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> انتخاب تصویر</button></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">برند</label><input type="text" id="item-brand" class="form-input" placeholder="نام برند تجاری"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">مدل / شماره فنی (Part Number)</label><input type="text" id="item-model" class="form-input" dir="ltr"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کد محصول / SKU</label><input type="text" id="item-sku" class="form-input" dir="ltr"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کشور سازنده (Origin)</label><input type="text" id="item-origin" class="form-input" placeholder="ایران، چین، آلمان..."></div>
+            <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">وضعیت تأمین/تولید محصول</label>
+                <select id="item-status" class="form-input">
+                    <option value="current">تولید فعلی (موجود یا در خط تولید)</option>
+                    <option value="custom">تولید سفارشی (ساخت پس از سفارش)</option>
+                    <option value="import">وارداتی</option>
+                    <option value="other">سایر موارد</option>
+                </select>
+            </div>
           `}
-          
         </div>
-        <div style="text-align: left; margin-top: 2rem;"><button class="btn btn-primary" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="window.nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button></div>
+        <div style="text-align: left; margin-top: 2rem;"><button class="btn btn-primary" style="padding: 10px 30px;" onclick="window.nextProdStep()">مرحله بعد ➔</button></div>
       </div>
 
-      <div id="prod-step-2" class="prod-step-content">
-        <h3 style="margin-bottom: 1.5rem;">۲. توضیحات و معرفی</h3>
+      <!-- STEP 2: Media & Intro -->
+      <div id="prod-step-2" class="prod-step-content" style="display: none;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-primary);">۲. معرفی، سئو و رسانه</h3>
         <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">شرح کوتاه (نمایش در لیست‌ها)</label><textarea class="form-input" rows="2"></textarea></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">شرح کامل و جزئیات</label><textarea class="form-input" rows="5"></textarea></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کاربردهای اصلی و صنایع هدف</label><input type="text" class="form-input"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="window.prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
-          <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;" onclick="window.nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
-        </div>
-      </div>
-
-      <div id="prod-step-3" class="prod-step-content">
-        <h3 style="margin-bottom: 1.5rem;">۳. ${isService ? 'ویژگی‌ها و پارامترهای سرویس' : 'مشخصات فنی تخصصی'}</h3>
-        <div id="tech-specs-container">
-          <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <input type="text" class="form-input" style="flex:1;">
-            <input type="text" class="form-input" style="flex:2;">
-            <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0 15px; display: inline-flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">توضیح کوتاه (نمایش در کارت‌ها - مکس ۱۵۰ کاراکتر)</label><textarea id="item-short-desc" class="form-input" rows="2"></textarea></div>
+          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">توضیح کامل و جزئیات</label><textarea id="item-full-desc" class="form-input" rows="5"></textarea></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+              <div><label style="font-weight: 600; display:block; margin-bottom:5px;">مزیت‌های اصلی (با کاما جدا کنید)</label><input type="text" id="item-advantages" class="form-input" placeholder="گارانتی ۵ ساله, راندمان بالا..."></div>
+              <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کلمات کلیدی جستجو (سئو)</label><input type="text" id="item-keywords" class="form-input" placeholder="الکتروموتور, موتور سه فاز, ضد انفجار..."></div>
+          </div>
+          <div style="padding: 1.5rem; border: 1px dashed var(--color-border); border-radius: 8px; background: #f8fafc; margin-top: 10px;">
+              <h4 style="margin-bottom: 15px; font-size: 1rem;">پیوست‌های رسانه‌ای</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                  <div><label style="font-weight: 600; display:block; margin-bottom:5px;">تصاویر (اصلی و گالری)</label><button class="btn btn-outline" style="width: 100%;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:5px; vertical-align:middle;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> انتخاب تصاویر (حداکثر ۵)</button></div>
+                  <div><label style="font-weight: 600; display:block; margin-bottom:5px;">ویدئو معرفی (اختیاری)</label><button class="btn btn-outline" style="width: 100%;">آپلود ویدئو (MP4)</button></div>
+                  <div style="grid-column: 1/-1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">کاتالوگ / دیتاشیت فنی</label><button class="btn btn-outline" style="width: 100%; border-color: #8b5cf6; color: #8b5cf6;">آپلود فایل PDF</button></div>
+              </div>
           </div>
         </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="window.prevProdStep()">➔ مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 30px;" onclick="window.nextProdStep()">مرحله بعد ➔</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Technical Specifications -->
+      <div id="prod-step-3" class="prod-step-content" style="display: none;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-primary);">۳. ${isService ? 'ویژگی‌های کلیدی سرویس' : 'مشخصات فنی تخصصی'}</h3>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem;">وارد کردن مشخصات فنی دقیق، امکان مقایسه محصول شما با رقبا را برای خریداران فراهم می‌کند.</p>
         
-        <button class="btn btn-outline" style="margin-top: 10px; border-style: dashed; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="window.addTechSpecRow()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن پارامتر جدید</button>
+        <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: grid; grid-template-columns: 2fr 2fr 1.5fr 80px; gap: 10px; font-weight: bold; font-size: 0.85rem; color: #475569;">
+            <div>نام مشخصه / ویژگی</div>
+            <div>مقدار</div>
+            <div>واحد اندازه‌گیری</div>
+            <div style="text-align:center;">عملیات</div>
+        </div>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="window.prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 5"></polyline></svg> مرحله قبل</button>
-          <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;" onclick="window.nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+        <div id="tech-specs-container">
+            <!-- ردیف‌های داینامیک اینجا اضافه می‌شوند -->
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn btn-outline" style="flex: 1; border-style: dashed; border-color: var(--color-primary); color: var(--color-primary);" onclick="window.addSpecRow('standard')">+ افزودن مشخصه استاندارد (پیش‌فرض سیستم)</button>
+            <button class="btn btn-outline" style="flex: 1; border-style: dashed; border-color: #8b5cf6; color: #8b5cf6;" onclick="window.addSpecRow('custom')">+ افزودن مشخصه سفارشی (جدید)</button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 2.5rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="window.prevProdStep()">➔ مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 30px;" onclick="window.nextProdStep()">مرحله بعد ➔</button>
         </div>
       </div>
 
-      <div id="prod-step-4" class="prod-step-content">
-        <h3 style="margin-bottom: 1.5rem;">۴. مجوزها و گواهینامه‌های اعتباری</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام مجوز / استاندارد</label><input type="text" class="form-input"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نهاد صادرکننده</label><input type="text" class="form-input"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">تاریخ انقضا</label><input type="date" class="form-input"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">سند ضمیمه</label><button class="btn btn-outline" style="width:100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> آپلود فایل</button></div>
+      <!-- STEP 4: Certifications -->
+      <div id="prod-step-4" class="prod-step-content" style="display: none;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-primary);">۴. مجوزها و استانداردهای کیفی</h3>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem;">گواهینامه‌های مرتبط با این آیتم را جهت اعتمادسازی بیشتر بارگذاری کنید.</p>
+        
+        <div id="certs-container">
+           <!-- ردیف‌های مجوز داینامیک -->
         </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="window.prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 5"></polyline></svg> مرحله قبل</button>
-          <button class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;" onclick="window.nextProdStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
+
+        <button class="btn btn-outline" style="margin-top: 10px; border-style: dashed; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="window.addCertRow()">+ افزودن گواهینامه / استاندارد جدید</button>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 2.5rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="window.prevProdStep()">➔ مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 30px;" onclick="window.nextProdStep()">مرحله بعد ➔</button>
         </div>
       </div>
 
-      <div id="prod-step-5" class="prod-step-content">
-        <h3 style="margin-bottom: 1.5rem;">۵. اطلاعات تجاری و قرارداد</h3>
+      <!-- STEP 5: Commercial & Financial -->
+      <div id="prod-step-5" class="prod-step-content" style="display: none;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--color-primary);">۵. اطلاعات تجاری، شرایط مالی و ارسال</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
           
           ${isService ? `
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">مدل قیمت‌گذاری</label><select class="form-input"><option>قراردادی (پروژه‌ای)</option><option>ساعتی / روزمزد</option><option>برآورد پس از کارشناسی</option></select></div>
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">زمان‌بندی میانگین اجرا (SLA)</label><input type="text" class="form-input"></div>
-            <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">شرایط پرداخت و تسویه حساب</label><textarea class="form-input" rows="3"></textarea></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">مدل قیمت‌گذاری *</label>
+                <select id="comm-price-type" class="form-input">
+                    <option value="hourly">ساعتی</option>
+                    <option value="daily">روزانه</option>
+                    <option value="project">پروژه‌ای (مقطوع)</option>
+                    <option value="negotiable">توافقی</option>
+                    <option value="rfq">فقط بر اساس استعلام (RFQ)</option>
+                </select>
+            </div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">حداقل حجم سفارش / پروژه</label><input type="text" id="comm-moq" class="form-input" placeholder="مثال: حداقل ۱۰۰ ساعت یا ۱ هکتار"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">زمان اجرای معمول (Lead Time)</label><input type="text" id="comm-lead-time" class="form-input" placeholder="مثال: بین ۱ تا ۳ ماه"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">ظرفیت اجرای همزمان</label><input type="text" id="comm-capacity" class="form-input" placeholder="مثال: ۳ پروژه در ماه"></div>
           ` : `
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">مدل قیمت‌گذاری</label><select class="form-input"><option>استعلامی (قابل مذاکره)</option><option>قیمت ثابت</option></select></div>
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">حداقل میزان سفارش (MOQ)</label><div style="display:flex; gap:10px;"><input type="number" class="form-input" style="flex:2;"><select class="form-input" style="flex:1;"><option>عدد</option><option>تن</option><option>بشکه</option><option>دستگاه</option></select></div></div>
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">زمان‌بندی تحویل کالا</label><input type="text" class="form-input"></div>
-            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نوع بسته‌بندی پالت/بار</label><input type="text" class="form-input"></div>
-            <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">شرایط پرداخت و ارسال</label><textarea class="form-input" rows="3"></textarea></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نوع قیمت‌گذاری *</label>
+                <select id="comm-price-type" class="form-input">
+                    <option value="fixed">قیمت ثابت مشخص</option>
+                    <option value="negotiable">قابل مذاکره</option>
+                    <option value="rfq" selected>فقط بر اساس استعلام (RFQ)</option>
+                </select>
+            </div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">حداقل مقدار سفارش (MOQ)</label><input type="text" id="comm-moq" class="form-input" placeholder="مثال: ۱۰۰ کیلوگرم"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">واحد فروش / شمارش</label><input type="text" id="comm-sales-unit" class="form-input" placeholder="مثال: پالت، بشکه، عدد..."></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">ظرفیت تأمین ماهانه</label><input type="text" id="comm-capacity" class="form-input" placeholder="مثال: ۵۰۰۰ تن"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">زمان آماده‌سازی / ارسال (Lead Time)</label><input type="text" id="comm-lead-time" class="form-input" placeholder="مثال: ۱۴ روز کاری"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نوع بسته‌بندی</label><input type="text" id="comm-packaging" class="form-input" placeholder="مثال: جامبوبگ ۱ تنی"></div>
           `}
+          
+          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">شرایط پرداخت مورد قبول</label><input type="text" id="comm-pay-terms" class="form-input" placeholder="مثال: 50% پیش‌پرداخت، LC، نقدی..."></div>
+          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">شرایط تحویل / پوشش دهی</label><input type="text" id="comm-delivery" class="form-input" placeholder="مثال: تحویل درب کارخانه (EXW)، FOB بندر عباس..."></div>
           
         </div>
         
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
-          <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="window.prevProdStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 5"></polyline></svg> مرحله قبل</button>
+        <div style="display: flex; justify-content: space-between; margin-top: 2.5rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="window.prevProdStep()">➔ مرحله قبل</button>
           <div style="display:flex; gap:10px;">
-            <button class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 6px;" onclick="alert('آیتم به عنوان پیش‌نویس ذخیره شد.'); window.loadProductsTab();"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> ذخیره پیش‌نویس</button>
-            <button class="btn btn-primary" style="background:#10b981; border-color:#10b981; display: inline-flex; align-items: center; gap: 6px;" onclick="alert('آیتم جدید با موفقیت در سیستم ثبت و منتشر شد.'); window.loadProductsTab();"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> انتشار در پلتفرم</button>
+            <button class="btn btn-outline" onclick="window.submitNewItem(false)">ذخیره پیش‌نویس</button>
+            <button class="btn btn-primary" style="background:#10b981; border-color:#10b981; padding: 10px 30px;" onclick="window.submitNewItem(true)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; vertical-align: bottom;"><polyline points="20 6 9 17 4 12"></polyline></svg> ثبت نهایی و انتشار</button>
           </div>
         </div>
       </div>
 
     </div>
   `;
-  setTimeout(() => window.showProdStep(1), 0);
+  
+  setTimeout(() => {
+      window.showProdStep(1);
+      if(!isService) window.addSpecRow('standard');
+  }, 0);
 };
 
+// 🌟 HTML واحدها برای سلکت‌باکس
+const getUnitsHtml = () => `
+    <optgroup label="طول و ابعاد">
+      <option value="u_mm|میلی‌متر">میلی‌متر</option>
+      <option value="u_cm|سانتی‌متر">سانتی‌متر</option>
+      <option value="u_m|متر">متر</option>
+      <option value="u_in|اینچ">اینچ</option>
+    </optgroup>
+    <optgroup label="وزن و جرم">
+      <option value="u_g|گرم">گرم</option>
+      <option value="u_kg|کیلوگرم">کیلوگرم</option>
+      <option value="u_t|تن">تن</option>
+      <option value="u_lb|پوند">پوند</option>
+    </optgroup>
+    <optgroup label="حجم">
+      <option value="u_ml|میلی‌لیتر">میلی‌لیتر</option>
+      <option value="u_l|لیتر">لیتر</option>
+      <option value="u_m3|متر مکعب">متر مکعب</option>
+    </optgroup>
+    <optgroup label="الکتریکی">
+      <option value="u_v|ولت">ولت</option>
+      <option value="u_kv|کیلوولت">کیلوولت</option>
+      <option value="u_a|آمپر">آمپر</option>
+      <option value="u_w|وات">وات</option>
+      <option value="u_kw|کیلووات">کیلووات</option>
+    </optgroup>
+    <optgroup label="سایر">
+      <option value="u_bar|بار (فشار)">بار (فشار)</option>
+      <option value="u_pa|پاسکال">پاسکال</option>
+      <option value="u_c|درجه سانتی‌گراد">درجه سانتی‌گراد</option>
+      <option value="u_none|بدون واحد" selected>بدون واحد / متنی</option>
+    </optgroup>
+`;
+
+// 🌟 ویژگی‌های پیش‌فرض دمو بر اساس دسته
+const getStandardAttrsHtml = () => `
+    <option value="">انتخاب ویژگی...</option>
+    <option value="attr_material|جنس / متریال">جنس / متریال</option>
+    <option value="attr_length|طول">طول</option>
+    <option value="attr_width|عرض">عرض</option>
+    <option value="attr_height|ارتفاع">ارتفاع</option>
+    <option value="attr_weight|وزن">وزن</option>
+    <option value="attr_density|چگالی">چگالی</option>
+    <option value="attr_voltage|ولتاژ">ولتاژ</option>
+    <option value="attr_power|توان">توان</option>
+    <option value="attr_capacity|ظرفیت">ظرفیت</option>
+    <option value="attr_pressure|فشار">فشار</option>
+    <option value="attr_temp|دما کارکرد">دما کارکرد</option>
+    <option value="attr_grade|گرید / کلاس">گرید / کلاس</option>
+    <option value="attr_viscosity|ویسکوزیته">ویسکوزیته</option>
+    <option value="attr_color|رنگ">رنگ</option>
+    <option value="attr_purity|درجه خلوص">درجه خلوص</option>
+`;
+
+window.addSpecRow = (type) => {
+    const container = document.getElementById('tech-specs-container');
+    const isCustom = type === 'custom';
+    
+    const row = document.createElement('div');
+    row.className = 'spec-row';
+    row.style = "display: grid; grid-template-columns: 2fr 2fr 1.5fr 80px; gap: 10px; margin-bottom: 10px; align-items: start;";
+    
+    const nameInput = isCustom 
+        ? `<input type="text" class="form-input spec-name" placeholder="نام مشخصه سفارشی...">` 
+        : `<select class="form-input spec-name">${getStandardAttrsHtml()}</select>`;
+
+    row.innerHTML = `
+        <input type="hidden" class="spec-is-custom" value="${isCustom}">
+        ${nameInput}
+        <input type="text" class="form-input spec-val" placeholder="مقدار (مثلاً 220)">
+        <select class="form-input spec-unit">${getUnitsHtml()}</select>
+        <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444; padding:0; height: 42px;" onclick="this.parentElement.remove()">حذف</button>
+    `;
+    container.appendChild(row);
+};
+
+window.addCertRow = () => {
+    const container = document.getElementById('certs-container');
+    const row = document.createElement('div');
+    row.className = 'cert-row';
+    row.style = "background: #f8fafc; border: 1px solid var(--color-border); border-radius: 8px; padding: 15px; margin-bottom: 15px; position: relative;";
+    row.innerHTML = `
+        <button class="btn-close" style="position:absolute; top:15px; left:15px; background:white; border:1px solid #e2e8f0; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#ef4444;" onclick="this.parentElement.remove()">✕</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom:0;">
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام استاندارد / گواهینامه</label><input type="text" class="form-input cert-name" placeholder="مثال: ISO 9001"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">شماره گواهینامه</label><input type="text" class="form-input cert-no"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نهاد صادرکننده</label><input type="text" class="form-input cert-issuer"></div>
+            <div><label style="font-weight: 600; display:block; margin-bottom:5px;">تاریخ انقضا</label><input type="date" class="form-input cert-expiry"></div>
+        </div>
+    `;
+    container.appendChild(row);
+};
+
+window.showProdStep = (step) => {
+  document.querySelectorAll('.prod-step-content').forEach(el => el.style.display = 'none');
+  const targetEl = document.getElementById(`prod-step-${step}`);
+  if (targetEl) targetEl.style.display = 'block';
+
+  document.querySelectorAll('.step-indicator').forEach((el, index) => {
+    if(!el.classList.contains('prod-step-indicator')) return;
+    if (index + 1 < step) {
+      el.style.color = '#10b981';
+      el.style.borderBottom = '3px solid #10b981';
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${el.dataset.title}`;
+    } else if (index + 1 === step) {
+      el.style.color = 'var(--color-primary)';
+      el.style.borderBottom = '3px solid var(--color-primary)';
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> ${el.dataset.title}`;
+    } else {
+      el.style.color = '#94a3b8';
+      el.style.borderBottom = '3px solid transparent';
+      el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="10"></circle></svg> ${el.dataset.title}`;
+    }
+  });
+  window.currentProdStep = step;
+};
+
+window.nextProdStep = () => { if(window.currentProdStep < 5) window.showProdStep(window.currentProdStep + 1); };
+window.prevProdStep = () => { if(window.currentProdStep > 1) window.showProdStep(window.currentProdStep - 1); };
+
+// 🌟 استخراج و سابمیت اطلاعات ساختاریافته به سیستم
+window.submitNewItem = async (isPublished) => {
+    const isService = window.currentAddingItemType === 'service';
+    
+    // جمع‌آوری اطلاعات پایه
+    const name = document.getElementById('item-name').value;
+    const category = document.getElementById('item-category').value;
+    
+    if (!name || (!isService && !category)) {
+        alert('لطفاً فیلدهای ستاره‌دار در مرحله اول را پر کنید.');
+        window.showProdStep(1);
+        return;
+    }
+
+    // استخراج مشخصات فنی ساختاریافته (مهمترین بخش معماری جدید)
+    const technicalAttributes = [];
+    document.querySelectorAll('.spec-row').forEach(row => {
+        const isCustom = row.querySelector('.spec-is-custom').value === 'true';
+        const nameVal = row.querySelector('.spec-name').value; // custom: string, standard: "id|name"
+        const val = row.querySelector('.spec-val').value;
+        const unitVal = row.querySelector('.spec-unit').value; // "id|name"
+
+        if (nameVal && val) {
+            const unitParts = unitVal.split('|');
+            let attrId, attrName;
+            
+            if (isCustom) {
+                attrId = 'custom_' + Math.random().toString(36).substr(2, 9);
+                attrName = nameVal;
+            } else {
+                const nameParts = nameVal.split('|');
+                attrId = nameParts[0];
+                attrName = nameParts[1] || nameParts[0];
+            }
+
+            technicalAttributes.push({
+                attributeId: attrId,
+                attributeName: attrName,
+                value: val,
+                unitId: unitParts[0],
+                unitName: unitParts[1] || '',
+                isCustom: isCustom
+            });
+        }
+    });
+
+    // استخراج گواهینامه‌ها
+    const certifications = [];
+    document.querySelectorAll('.cert-row').forEach(row => {
+        const cName = row.querySelector('.cert-name').value;
+        if (cName) {
+            certifications.push({
+                name: cName,
+                number: row.querySelector('.cert-no').value,
+                issuer: row.querySelector('.cert-issuer').value,
+                expiry: row.querySelector('.cert-expiry').value
+            });
+        }
+    });
+
+    // ساخت Payload نهایی
+    const payload = {
+        itemType: window.currentAddingItemType,
+        status: isPublished ? 'active' : 'draft',
+        name: name,
+        englishName: document.getElementById('item-en-name').value,
+        categoryId: category,
+        subcategory: document.getElementById('item-subcategory').value,
+        
+        // فیلدهای کالا
+        brand: !isService ? document.getElementById('item-brand').value : null,
+        model: !isService ? document.getElementById('item-model').value : null,
+        sku: !isService ? document.getElementById('item-sku').value : null,
+        origin: !isService ? document.getElementById('item-origin').value : null,
+        productionStatus: !isService ? document.getElementById('item-status').value : null,
+        
+        // فیلدهای خدمات
+        geoCoverage: isService ? document.getElementById('item-geo').value : null,
+        serviceType: isService ? document.getElementById('item-service-type').value : null,
+        industries: isService ? document.getElementById('item-industries').value : null,
+        
+        // معرفی و مدیا
+        shortDescription: document.getElementById('item-short-desc').value,
+        fullDescription: document.getElementById('item-full-desc').value,
+        advantages: document.getElementById('item-advantages').value,
+        keywords: document.getElementById('item-keywords').value,
+        
+        // مشخصات فنی و گواهی‌ها
+        technicalAttributes: technicalAttributes,
+        certifications: certifications,
+        
+        // تجاری و مالی
+        priceType: document.getElementById('comm-price-type').value,
+        moq: document.getElementById('comm-moq').value,
+        leadTime: document.getElementById('comm-lead-time').value,
+        paymentTerms: document.getElementById('comm-pay-terms').value,
+        deliveryTerms: document.getElementById('comm-delivery').value,
+        
+        salesUnit: !isService ? document.getElementById('comm-sales-unit').value : null,
+        supplyCapacity: !isService ? document.getElementById('comm-capacity').value : null,
+        packaging: !isService ? document.getElementById('comm-packaging').value : null,
+        executionCapacity: isService ? document.getElementById('comm-capacity').value : null,
+    };
+
+    // در اینجا Payload کامل و استاندارد به سرویس فرستاده می‌شود
+    console.log("Structured Product Payload:", payload);
+    
+    // شبیه‌سازی فراخوانی ProductService (بدون نیاز به بک‌اند واقعی)
+    // await ProductService.addProduct(payload);
+    
+    alert(isPublished ? 'آیتم جدید با موفقیت در سیستم ثبت و منتشر شد.' : 'آیتم به عنوان پیش‌نویس ذخیره شد.');
+    window.loadProductsTab();
+};
 // ==========================================
 // 7. ARTICLES (مدیریت مقالات)
 // ==========================================
@@ -1367,372 +1813,366 @@ window.deleteArticleFunc = async (id) => {
   }
 };
 // ==========================================
-// 8. PROFILE (پروفایل شرکت)
+// 🌟 8. PROFILE (پروفایل تجاری جامع B2B) 🌟
 // ==========================================
+
 window.loadProfileTab = () => {
   const content = document.getElementById('panel-content');
-  const roles = currentProfile.roles || ['buyer', 'supplier'];
+  const p = currentProfile || {};
+  const roles = p.roles || ['buyer', 'supplier'];
+  const bizTypes = p.businessTypes || [];
   
-  const isBuyer = roles.includes('buyer') ? 'checked' : '';
-  const isSupplier = roles.includes('supplier') ? 'checked' : '';
-  const isService = roles.includes('service_provider') ? 'checked' : '';
+  // توابع کمکی برای تیک‌خوردن چک‌باکس‌ها
+  const isRole = (r) => roles.includes(r) ? 'checked' : '';
+  const isType = (t) => bizTypes.includes(t) ? 'checked' : '';
+
+  // محاسبه درصد تکمیل پروفایل
+  const requiredFields = [p.name, p.englishName, p.industry, p.description, p.country, p.city, p.address, p.phone, p.email, p.contact?.person, p.targetMarkets];
+  const filledFields = requiredFields.filter(f => f && String(f).trim() !== '').length;
+  const completionRate = Math.round((filledFields / requiredFields.length) * 100) || 0;
 
   const style = `
     <style>
-      .step-container { display: flex; justify-content: space-between; margin-bottom: 2rem; background: var(--color-surface); padding: 10px; border-radius: 8px; border: 1px solid var(--color-border); }
-      .step-indicator { flex: 1; text-align: center; padding: 10px; font-weight: 600; font-size: 0.9rem; transition: 0.3s; color: #94a3b8; border-bottom: 3px solid transparent; }
+      .step-container { display: flex; justify-content: space-between; margin-bottom: 2rem; background: white; padding: 10px; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+      .step-indicator { flex: 1; text-align: center; padding: 12px 10px; font-weight: 600; font-size: 0.95rem; transition: 0.3s; color: #94a3b8; border-bottom: 3px solid transparent; cursor: pointer; }
       .step-active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
       .step-completed { color: #10b981; border-bottom-color: #10b981; }
-      .profile-step-content { display: none; animation: fadeIn 0.4s ease-in-out; }
-      .checkbox-group { display: flex; gap: 15px; margin-top: 5px; }
-      .checkbox-card { border: 1px solid var(--color-border); padding: 10px 15px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
-      .checkbox-card:hover { border-color: var(--color-primary); background: #f8fafc; }
+      .profile-step-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+      
+      .prof-card { background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+      .prof-card-title { font-size: 1.1rem; color: #0f172a; margin-bottom: 1.2rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+      
+      .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+      .checkbox-card { border: 1px solid var(--color-border); padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; background: #f8fafc; font-size: 0.9rem; color: #334155; }
+      .checkbox-card:hover { border-color: var(--color-primary); background: #eff6ff; }
+      .checkbox-card input { width: 16px; height: 16px; accent-color: var(--color-primary); cursor: pointer; }
+      
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+      .form-grid.full { grid-template-columns: 1fr; }
+      
+      .prof-label { font-weight: 600; display: block; margin-bottom: 6px; color: #1e293b; font-size: 0.9rem; }
+      .prof-input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.95rem; outline: none; transition: 0.2s; background: white; }
+      .prof-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+      
+      .completion-bar-bg { width: 100%; height: 8px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+      .completion-bar-fill { height: 100%; background: ${completionRate >= 80 ? '#10b981' : (completionRate >= 50 ? '#f59e0b' : '#ef4444')}; transition: width 1s ease; }
+      
       @keyframes fadeIn { from {opacity: 0; transform: translateY(5px);} to {opacity: 1; transform: translateY(0);} }
+      @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
     </style>
   `;
 
   content.innerHTML = style + `
-    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> پروفایل تجاری و هویتی شرکت</h2>
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h2 style="font-size: 1.6rem; color: #0f172a; margin-bottom: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path></svg> ویرایش پروفایل تجاری شرکت</h2>
+            <p style="color: #64748b; font-size: 0.95rem; margin: 0;">پروفایل کامل‌تر = جلب اعتماد بیشتر خریداران و رتبه بهتر در جستجوها.</p>
+        </div>
+        <div style="background: white; border: 1px solid var(--color-border); padding: 12px 20px; border-radius: 12px; min-width: 250px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: bold; color: #1e293b;">
+                <span>وضعیت تکمیل پروفایل</span>
+                <span style="color: ${completionRate >= 80 ? '#10b981' : '#f59e0b'};">${completionRate}٪</span>
+            </div>
+            <div class="completion-bar-bg"><div class="completion-bar-fill" style="width: ${completionRate}%;"></div></div>
+        </div>
+    </div>
     
     <div class="step-container">
-      <div class="step-indicator" data-title="اطلاعات پایه">اطلاعات پایه</div>
-      <div class="step-indicator" data-title="تماس و آدرس">تماس و آدرس</div>
-      <div class="step-indicator" data-title="ساختار فعالیت">ساختار فعالیت</div>
+      <div class="step-indicator" id="ind-1" onclick="window.showProfileStep(1)" data-title="اطلاعات هویتی و ثبتی">۱. اطلاعات هویتی و ثبتی</div>
+      <div class="step-indicator" id="ind-2" onclick="window.showProfileStep(2)" data-title="اطلاعات تماس و موقعیت">۲. اطلاعات تماس و موقعیت</div>
+      <div class="step-indicator" id="ind-3" onclick="window.showProfileStep(3)" data-title="توانمندی‌ها و بازار">۳. توانمندی‌ها و بازار</div>
     </div>
 
-    <div style="background: white; padding: 2.5rem; border-radius: 12px; border: 1px solid var(--color-border); box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-      
-      <div id="step-1" class="profile-step-content">
-        <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۱. اطلاعات هویتی و ثبت شرکت</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام رسمی شرکت *</label><input type="text" class="form-input" value="${currentProfile.name || ''}"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام انگلیسی (برای صادرات)</label><input type="text" class="form-input" value="${currentProfile.englishName || ''}"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">نام تجاری (Brand)</label><input type="text" class="form-input" value="${currentProfile.brand || ''}"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">سال تأسیس</label><input type="number" class="form-input" value="${currentProfile.foundedYear || ''}"></div>
-          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">معرفی کامل شرکت (درباره ما)</label><textarea class="form-input" rows="4">${currentProfile.description || ''}</textarea></div>
-          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">لوگوی شرکت</label><button class="btn btn-outline" style="width: 200px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> آپلود تصویر جدید</button></div>
-        </div>
-        <div style="text-align: left; margin-top: 2rem;">
-          <button class="btn btn-primary" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="window.nextProfileStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
-        </div>
-      </div>
-
-      <div id="step-2" class="profile-step-content">
-        <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۲. اطلاعات ارتباطی و موقعیت استقرار</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">کشور</label><input type="text" class="form-input" value="${currentProfile.country || 'ایران'}"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">استان / شهر</label><input type="text" class="form-input" value="${currentProfile.city || ''}"></div>
-          <div style="grid-column: 1 / -1;"><label style="font-weight: 600; display:block; margin-bottom:5px;">آدرس دقیق دفتر مرکزی</label><input type="text" class="form-input" value="${currentProfile.address || ''}"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">ایمیل سازمانی</label><input type="email" class="form-input" value="${currentProfile.email || ''}"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">تلفن ثابت (با کد)</label><input type="text" class="form-input" value="${currentProfile.phone || ''}" dir="ltr"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">وب‌سایت رسمی</label><input type="url" class="form-input" value="${currentProfile.website || ''}" dir="ltr"></div>
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">شماره واتساپ شرکت</label><input type="text" class="form-input" value="${currentProfile.contact?.whatsapp || ''}" dir="ltr"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-          <button class="btn btn-outline" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="window.prevProfileStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
-          <button class="btn btn-primary" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="window.nextProfileStep()">مرحله بعد <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></button>
-        </div>
-      </div>
-
-      <div id="step-3" class="profile-step-content">
-        <h3 style="margin-bottom: 1.5rem; color: var(--color-text-main);">۳. ماهیت فعالیت و نقش‌ها در TradeCore</h3>
+    <!-- ======================= -->
+    <!-- STEP 1: Identity        -->
+    <!-- ======================= -->
+    <div id="step-1" class="profile-step-content">
         
-        <div style="margin-bottom: 2rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px dashed var(--color-primary);">
-          <label style="font-weight: bold; font-size: 1.1rem; display:block; margin-bottom:10px; color: var(--color-primary);">نقش‌های شما در پلتفرم (می‌توانید چند مورد را انتخاب کنید)</label>
-          <div class="checkbox-group" style="flex-wrap: wrap;">
-            <label class="checkbox-card"><input type="checkbox" id="role-buyer" ${isBuyer}> خریدار (ارسال RFQ / ثبت مناقصه)</label>
-            <label class="checkbox-card"><input type="checkbox" id="role-supplier" ${isSupplier}> تأمین‌کننده کالا (فروش محصولات)</label>
-            <label class="checkbox-card"><input type="checkbox" id="role-service" ${isService} onchange="window.toggleServiceFields()"> ارائه‌دهنده خدمات صنعتی/تجاری</label>
-          </div>
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> هویت اصلی</h4>
+            <div class="form-grid">
+                <div><label class="prof-label">نام رسمی شرکت *</label><input type="text" id="p-name" class="prof-input" value="${p.name || ''}" placeholder="شرکت تولیدی..."></div>
+                <div><label class="prof-label">نام انگلیسی شرکت *</label><input type="text" id="p-en-name" class="prof-input" value="${p.englishName || ''}" dir="ltr" placeholder="Company Ltd."></div>
+                <div><label class="prof-label">نام تجاری / برند</label><input type="text" id="p-brand" class="prof-input" value="${p.brand || ''}"></div>
+                <div><label class="prof-label">سال تأسیس</label><input type="number" id="p-year" class="prof-input" value="${p.foundedYear || ''}" dir="ltr"></div>
+            </div>
         </div>
 
-        <div id="service-types-container" style="display: ${isService ? 'block' : 'none'}; margin-bottom: 2rem; padding: 1.5rem; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-          <label style="font-weight: 600; display:block; margin-bottom:10px;">حوزه تخصصی خدمات شما (امکان انتخاب چند مورد)</label>
-          <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-            <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> حمل‌ونقل و لجستیک بین‌المللی</label>
-            <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> لجستیک داخلی</label>
-            <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> بیمه باربری و مسئولیت</label>
-            <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> بازرسی کیفی (PSI)</label>
-            <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> ترخیص و خدمات گمرکی</label>
-            <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> پیمانکاری اجرایی (EPC)</label>
-            <label class="checkbox-card" style="padding: 5px 10px; font-size: 0.9rem;"><input type="checkbox"> طراحی و مهندسی</label>
-          </div>
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> اطلاعات ثبتی و قانونی</h4>
+            <div class="form-grid">
+                <div><label class="prof-label">شماره ثبت</label><input type="text" id="p-reg-no" class="prof-input" value="${p.registrationNumber || ''}" dir="ltr"></div>
+                <div><label class="prof-label">شناسه ملی / شناسه تجاری</label><input type="text" id="p-nat-id" class="prof-input" value="${p.nationalId || ''}" dir="ltr"></div>
+                <div><label class="prof-label">کد اقتصادی</label><input type="text" id="p-eco-code" class="prof-input" value="${p.economicCode || ''}" dir="ltr"></div>
+                <div><label class="prof-label">صنعت / صنایع اصلی فعالیت</label><input type="text" id="p-industry" class="prof-input" value="${p.industry || ''}" placeholder="مثلاً: پتروشیمی، فلزات..."></div>
+            </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
-          <div><label style="font-weight: 600; display:block; margin-bottom:5px;">صنعت اصلی فعالیت (دسته مادر)</label><input type="text" class="form-input" value="${currentProfile.industry || ''}"></div>
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg> نوع کسب‌وکار (Business Type)</h4>
+            <div class="checkbox-grid">
+                <label class="checkbox-card"><input type="checkbox" class="cb-biz-type" value="Manufacturer" ${isType('Manufacturer')}> تولیدکننده (Manufacturer)</label>
+                <label class="checkbox-card"><input type="checkbox" class="cb-biz-type" value="Supplier" ${isType('Supplier')}> تأمین‌کننده (Supplier)</label>
+                <label class="checkbox-card"><input type="checkbox" class="cb-biz-type" value="Wholesaler" ${isType('Wholesaler')}> عمده‌فروش (Wholesaler)</label>
+                <label class="checkbox-card"><input type="checkbox" class="cb-biz-type" value="Distributor" ${isType('Distributor')}> توزیع‌کننده (Distributor)</label>
+                <label class="checkbox-card"><input type="checkbox" class="cb-biz-type" value="Importer" ${isType('Importer')}> واردکننده (Importer)</label>
+                <label class="checkbox-card"><input type="checkbox" class="cb-biz-type" value="Exporter" ${isType('Exporter')}> صادرکننده (Exporter)</label>
+                <label class="checkbox-card"><input type="checkbox" class="cb-biz-type" value="Service Provider" ${isType('Service Provider')}> خدمات (Service Provider)</label>
+            </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
-          <button class="btn btn-outline" style="padding: 10px 30px; display: inline-flex; align-items: center; gap: 6px;" onclick="window.prevProfileStep()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg> مرحله قبل</button>
-          <button class="btn btn-primary" style="padding: 10px 40px; background: #10b981; border-color: #10b981; display: inline-flex; align-items: center; gap: 6px;" onclick="alert('پروفایل کسب‌وکار شما با موفقیت به‌روزرسانی شد.')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ذخیره نهایی پروفایل</button>
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> معرفی و مدیا</h4>
+            <div class="form-grid full">
+                <div>
+                    <label class="prof-label">معرفی کوتاه (شعار یا خلاصه فعالیت)</label>
+                    <input type="text" id="p-short-desc" class="prof-input" value="${p.shortDescription || ''}" placeholder="جمله‌ای کوتاه که در کارت شرکت نمایش داده می‌شود.">
+                </div>
+                <div>
+                    <label class="prof-label">درباره ما (معرفی کامل شرکت)</label>
+                    <textarea id="p-desc" class="prof-input" rows="5" placeholder="تاریخچه، توانمندی‌ها و اهداف شرکت را بنویسید...">${p.description || ''}</textarea>
+                </div>
+                <div class="form-grid">
+                    <div>
+                        <label class="prof-label">لوگوی شرکت</label>
+                        <button class="btn btn-outline btn-full"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> آپلود لوگو (JPG/PNG)</button>
+                    </div>
+                    <div>
+                        <label class="prof-label">تصاویر کارخانه / دفتر / گالری</label>
+                        <button class="btn btn-outline btn-full"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:5px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> آپلود تصاویر (حداکثر ۵)</button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <div style="text-align: left;">
+          <button class="btn btn-primary" style="padding: 10px 40px;" onclick="window.showProfileStep(2)">مرحله بعد ➔</button>
+        </div>
+    </div>
+
+    <!-- ======================= -->
+    <!-- STEP 2: Contact         -->
+    <!-- ======================= -->
+    <div id="step-2" class="profile-step-content">
+        
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> آدرس و موقعیت</h4>
+            <div class="form-grid">
+                <div><label class="prof-label">کشور *</label><input type="text" id="p-country" class="prof-input" value="${p.country || 'ایران'}"></div>
+                <div><label class="prof-label">استان / شهر *</label><input type="text" id="p-city" class="prof-input" value="${p.city || ''}"></div>
+                <div style="grid-column: 1 / -1;"><label class="prof-label">آدرس دقیق دفتر مرکزی *</label><input type="text" id="p-address" class="prof-input" value="${p.address || ''}"></div>
+                <div style="grid-column: 1 / -1;"><label class="prof-label">آدرس کارخانه / انبار (در صورت وجود)</label><input type="text" id="p-factory-addr" class="prof-input" value="${p.factoryAddress || ''}"></div>
+            </div>
+        </div>
+
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg> راه‌های ارتباطی</h4>
+            <div class="form-grid">
+                <div><label class="prof-label">تلفن ثابت (با کد) *</label><input type="text" id="p-phone" class="prof-input" value="${p.phone || ''}" dir="ltr"></div>
+                <div><label class="prof-label">ایمیل سازمانی *</label><input type="email" id="p-email" class="prof-input" value="${p.email || ''}" dir="ltr"></div>
+                <div><label class="prof-label">وب‌سایت رسمی</label><input type="url" id="p-web" class="prof-input" value="${p.website || ''}" dir="ltr"></div>
+                <div><label class="prof-label">شماره واتساپ (تجاری)</label><input type="text" id="p-wa" class="prof-input" value="${p.contact?.whatsapp || ''}" dir="ltr"></div>
+            </div>
+        </div>
+
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> شخص رابط تجاری (Contact Person)</h4>
+            <div class="form-grid">
+                <div><label class="prof-label">نام و نام خانوادگی رابط</label><input type="text" id="p-cp-name" class="prof-input" value="${p.contact?.person || ''}"></div>
+                <div><label class="prof-label">سمت شخص رابط</label><input type="text" id="p-cp-title" class="prof-input" value="${p.contact?.title || ''}" placeholder="مدیر فروش، کارشناس صادرات..."></div>
+                <div><label class="prof-label">شماره موبایل رابط</label><input type="text" id="p-cp-phone" class="prof-input" value="${p.contact?.personPhone || ''}" dir="ltr"></div>
+                <div><label class="prof-label">ایمیل مستقیم رابط</label><input type="email" id="p-cp-email" class="prof-input" value="${p.contact?.personEmail || ''}" dir="ltr"></div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="window.showProfileStep(1)">➔ مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 40px;" onclick="window.showProfileStep(3)">مرحله بعد ➔</button>
+        </div>
+    </div>
+
+    <!-- ======================= -->
+    <!-- STEP 3: Capabilities    -->
+    <!-- ======================= -->
+    <div id="step-3" class="profile-step-content">
+        
+        <div class="prof-card" style="border-color: var(--color-primary); background: #f8fafc;">
+            <h4 class="prof-card-title" style="border-bottom-color: #cbd5e1;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> نقش شما در TradeCore</h4>
+            <div class="checkbox-grid">
+                <label class="checkbox-card" style="background: white;"><input type="checkbox" id="role-buyer" class="cb-role" value="buyer" ${isRole('buyer')}> خریدار (ارسال RFQ / مناقصه)</label>
+                <label class="checkbox-card" style="background: white;"><input type="checkbox" id="role-supplier" class="cb-role" value="supplier" ${isRole('supplier')}> تأمین‌کننده (فروش کالا)</label>
+                <label class="checkbox-card" style="background: white;"><input type="checkbox" id="role-service" class="cb-role" value="service_provider" ${isRole('service_provider')}> ارائه‌دهنده خدمات صنعتی</label>
+            </div>
+        </div>
+
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg> توانمندی‌های تولید و تأمین</h4>
+            <div class="form-grid">
+                <div>
+                    <label class="prof-label">تعداد کارکنان</label>
+                    <select id="p-employees" class="prof-input">
+                        <option value="">انتخاب کنید...</option>
+                        <option value="1-10" ${p.employees === '1-10' ? 'selected' : ''}>۱ تا ۱۰ نفر</option>
+                        <option value="11-50" ${p.employees === '11-50' ? 'selected' : ''}>۱۱ تا ۵۰ نفر</option>
+                        <option value="51-200" ${p.employees === '51-200' ? 'selected' : ''}>۵۱ تا ۲۰۰ نفر</option>
+                        <option value="201-500" ${p.employees === '201-500' ? 'selected' : ''}>۲۰۱ تا ۵۰۰ نفر</option>
+                        <option value="500+" ${p.employees === '500+' ? 'selected' : ''}>بیش از ۵۰۰ نفر</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="prof-label">نوع تولید / عرضه</label>
+                    <select id="p-prod-type" class="prof-input">
+                        <option value="">انتخاب کنید...</option>
+                        <option value="Domestic" ${p.productionType === 'Domestic' ? 'selected' : ''}>تولید داخلی (کامل)</option>
+                        <option value="Assembly" ${p.productionType === 'Assembly' ? 'selected' : ''}>مونتاژ</option>
+                        <option value="Import" ${p.productionType === 'Import' ? 'selected' : ''}>واردات و فروش</option>
+                        <option value="Distribution" ${p.productionType === 'Distribution' ? 'selected' : ''}>توزیع منطقه‌ای</option>
+                    </select>
+                </div>
+                <div style="grid-column: 1 / -1;"><label class="prof-label">محصولات / خدمات اصلی (با کاما جدا کنید)</label><input type="text" id="p-main-prods" class="prof-input" value="${p.mainProducts || ''}" placeholder="مثال: روغن موتور، گریس، روانکار صنعتی..."></div>
+                <div><label class="prof-label">ظرفیت تولید / تأمین (ماهانه/سالانه)</label><input type="text" id="p-capacity" class="prof-input" value="${p.capacity || ''}" placeholder="مثال: 5000 تن در ماه"></div>
+                <div><label class="prof-label">حداقل سفارش معمول (MOQ)</label><input type="text" id="p-moq" class="prof-input" value="${p.moq || ''}" placeholder="مثال: 1 پالت یا 100 عدد"></div>
+            </div>
+            
+            <div style="display: flex; gap: 20px; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed #e2e8f0;">
+                <label class="checkbox-card" style="flex: 1; justify-content: center; font-weight: bold;"><input type="checkbox" id="p-oem" ${p.oem ? 'checked' : ''}> امکان تولید با برند مشتری (OEM)</label>
+                <label class="checkbox-card" style="flex: 1; justify-content: center; font-weight: bold;"><input type="checkbox" id="p-odm" ${p.odm ? 'checked' : ''}> امکان طراحی و تولید سفارشی (ODM)</label>
+            </div>
+        </div>
+
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg> بازارها و شرایط تجاری</h4>
+            <div class="form-grid">
+                <div style="grid-column: 1 / -1;"><label class="prof-label">بازارهای هدف اصلی</label><input type="text" id="p-target-markets" class="prof-input" value="${p.targetMarkets || ''}" placeholder="خاورمیانه، اروپا، آفریقا..."></div>
+                <div><label class="prof-label">کشورهای صادراتی اصلی</label><input type="text" id="p-export" class="prof-input" value="${p.exportCountries || ''}" placeholder="عراق، ترکیه، امارات..."></div>
+                <div><label class="prof-label">کشورهای وارداتی (تأمین مواد)</label><input type="text" id="p-import" class="prof-input" value="${p.importCountries || ''}" placeholder="چین، آلمان..."></div>
+                <div><label class="prof-label">شرایط پرداخت مورد قبول</label><input type="text" id="p-pay-terms" class="prof-input" value="${p.paymentTerms || ''}" placeholder="نقدی، LC، اعتباری..."></div>
+                <div><label class="prof-label">شرایط تحویل معمول (Incoterms)</label><input type="text" id="p-delivery" class="prof-input" value="${p.deliveryTerms || ''}" placeholder="FOB, CIF, EXW..."></div>
+            </div>
+        </div>
+
+        <div class="prof-card">
+            <h4 class="prof-card-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> استانداردها و گواهینامه‌ها</h4>
+            <div class="form-grid full">
+                <div>
+                    <label class="prof-label">استانداردها و گواهینامه‌های کیفی (با کاما جدا کنید)</label>
+                    <input type="text" id="p-certs" class="prof-input" value="${p.certifications ? p.certifications.join(', ') : ''}" placeholder="ISO 9001, CE, FDA, API...">
+                </div>
+                <div>
+                    <label class="prof-label">عضویت‌ها و افتخارات (سندیکا، انجمن، و...)</label>
+                    <textarea id="p-awards" class="prof-input" rows="2" placeholder="عضو اتاق بازرگانی، صادرکننده نمونه سال...">${p.awards || ''}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem;">
+          <button class="btn btn-outline" style="padding: 10px 30px;" onclick="window.showProfileStep(2)">➔ مرحله قبل</button>
+          <button class="btn btn-primary" style="padding: 10px 40px; background: #10b981; border-color: #10b981; font-size: 1.05rem;" onclick="window.submitSellerProfile(event)">
+             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ذخیره و بروزرسانی نهایی پروفایل
+          </button>
+        </div>
     </div>
   `;
 
   setTimeout(() => window.showProfileStep(1), 0);
 };
 
-window.currentProfileStep = 1;
+// 🌟 تابع جمع‌آوری اطلاعات و ارسال به سرویس
+window.submitSellerProfile = async (event) => {
+    const btn = event.target.closest('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'در حال ذخیره‌سازی...';
+    btn.disabled = true;
+
+    // جمع آوری نقش‌ها و نوع کسب‌وکار
+    const roles = Array.from(document.querySelectorAll('.cb-role:checked')).map(cb => cb.value);
+    const businessTypes = Array.from(document.querySelectorAll('.cb-biz-type:checked')).map(cb => cb.value);
+
+    // تبدیل کاما به آرایه برای گواهینامه‌ها
+    const certsRaw = document.getElementById('p-certs').value;
+    const certifications = certsRaw ? certsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    const profileData = {
+        name: document.getElementById('p-name').value,
+        englishName: document.getElementById('p-en-name').value,
+        brand: document.getElementById('p-brand').value,
+        foundedYear: document.getElementById('p-year').value,
+        registrationNumber: document.getElementById('p-reg-no').value,
+        nationalId: document.getElementById('p-nat-id').value,
+        economicCode: document.getElementById('p-eco-code').value,
+        industry: document.getElementById('p-industry').value,
+        businessTypes: businessTypes,
+        shortDescription: document.getElementById('p-short-desc').value,
+        description: document.getElementById('p-desc').value,
+        
+        country: document.getElementById('p-country').value,
+        city: document.getElementById('p-city').value,
+        address: document.getElementById('p-address').value,
+        factoryAddress: document.getElementById('p-factory-addr').value,
+        phone: document.getElementById('p-phone').value,
+        email: document.getElementById('p-email').value,
+        website: document.getElementById('p-web').value,
+        contact: {
+            whatsapp: document.getElementById('p-wa').value,
+            person: document.getElementById('p-cp-name').value,
+            title: document.getElementById('p-cp-title').value,
+            personPhone: document.getElementById('p-cp-phone').value,
+            personEmail: document.getElementById('p-cp-email').value,
+        },
+        
+        roles: roles,
+        employees: document.getElementById('p-employees').value,
+        productionType: document.getElementById('p-prod-type').value,
+        mainProducts: document.getElementById('p-main-prods').value,
+        capacity: document.getElementById('p-capacity').value,
+        oem: document.getElementById('p-oem').checked,
+        odm: document.getElementById('p-odm').checked,
+        targetMarkets: document.getElementById('p-target-markets').value,
+        exportCountries: document.getElementById('p-export').value,
+        importCountries: document.getElementById('p-import').value,
+        paymentTerms: document.getElementById('p-pay-terms').value,
+        deliveryTerms: document.getElementById('p-delivery').value,
+        
+        certifications: certifications,
+        awards: document.getElementById('p-awards').value
+    };
+
+    try {
+        await window.SellerService.updateProfile(profileData);
+        alert('پروفایل کسب‌وکار شما با موفقیت بروزرسانی شد.');
+        
+        // رفرش محلی برای آپدیت هدر و دیتاها
+        currentProfile = await window.SellerService.getProfile();
+        window.loadProfileTab();
+    } catch (error) {
+        alert(error.message || 'خطا در ذخیره‌سازی اطلاعات.');
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+};
+
 window.showProfileStep = (step) => {
   document.querySelectorAll('.profile-step-content').forEach(el => el.style.display = 'none');
   const targetEl = document.getElementById(`step-${step}`);
-  if (targetEl) targetEl.style.display = 'block';
+  if (targetEl) {
+      targetEl.style.display = 'block';
+      targetEl.style.animation = 'none';
+      targetEl.offsetHeight; // trigger reflow
+      targetEl.style.animation = null; 
+  }
 
   document.querySelectorAll('.step-indicator').forEach((el, index) => {
     if(!el.classList.contains('prod-step-indicator')) {
         if (index + 1 < step) {
           el.className = 'step-indicator step-completed';
-          el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${el.dataset.title}`;
+          el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg> ${el.dataset.title}`;
         } else if (index + 1 === step) {
           el.className = 'step-indicator step-active';
-          el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> ${el.dataset.title}`;
+          el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 6px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> ${el.dataset.title}`;
         } else {
           el.className = 'step-indicator step-pending';
-          el.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg> ${el.dataset.title}`;
+          el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 6px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg> ${el.dataset.title}`;
         }
     }
   });
-  window.currentProfileStep = step;
-};
-
-window.nextProfileStep = () => { if(window.currentProfileStep < 3) window.showProfileStep(window.currentProfileStep + 1); };
-window.prevProfileStep = () => { if(window.currentProfileStep > 1) window.showProfileStep(window.currentProfileStep - 1); };
-
-window.toggleServiceFields = () => {
-    const isChecked = document.getElementById('role-service').checked;
-    const container = document.getElementById('service-types-container');
-    if(container) container.style.display = isChecked ? 'block' : 'none';
-};
-
-// ==========================================
-// 🌟 9. تب آمار و بازدیدهای فروشنده (Analytics + Line Chart) 🌟
-// ==========================================
-
-window.sellerAnalyticsState = {
-  dateRange: 30, // پیش‌فرض 30 روزه برای نمایش بهتر نمودار
-  sort: 'views_desc'
-};
-
-window.changeSellerAnalyticsDate = (days, btn) => {
-  const buttons = btn.parentElement.querySelectorAll('button:not(#sa-custom-date-container button)');
-  buttons.forEach(b => {
-      b.classList.remove('btn-primary');
-      b.classList.add('btn-outline');
-  });
-  btn.classList.remove('btn-outline');
-  btn.classList.add('btn-primary');
-
-  const customContainer = document.getElementById('sa-custom-date-container');
-  if (days === 'custom') {
-      customContainer.style.display = 'flex';
-  } else {
-      customContainer.style.display = 'none';
-      window.sellerAnalyticsState.dateRange = days;
-      window.loadAnalyticsTabData();
-  }
-};
-
-window.applySellerCustomDate = () => {
-  const fromDate = document.getElementById('sa-date-from').value;
-  const toDate = document.getElementById('sa-date-to').value;
-  if(!fromDate || !toDate) return alert('لطفاً هر دو تاریخ شروع و پایان را مشخص کنید.');
-  window.sellerAnalyticsState.dateRange = { from: fromDate, to: toDate };
-  window.loadAnalyticsTabData();
-};
-
-window.changeSellerAnalyticsSort = (sortVal) => {
-  window.sellerAnalyticsState.sort = sortVal;
-  window.loadAnalyticsTabData();
-};
-
-// تابع رسم نمودار خطی SVG (بدون نیاز به کتابخانه خارجی)
-function generateSVGChart(data) {
-    if(!data || data.length < 2) return `<div style="text-align:center; padding: 3rem; color: #94a3b8; font-size: 0.9rem;">برای رسم نمودار روند، به اطلاعات بیش از یک روز نیاز است.</div>`;
-    
-    const width = 800;
-    const height = 220;
-    const padding = 40;
-    const maxVal = Math.max(...data.map(d => d.value), 5); // حداقل محور Y برابر 5
-    
-    const stepX = (width - padding * 2) / (data.length - 1);
-    
-    let points = '';
-    let elements = '';
-    
-    data.forEach((d, i) => {
-        const x = padding + (i * stepX);
-        const y = height - padding - ((d.value / maxVal) * (height - padding * 2));
-        points += `${x},${y} `;
-        
-        elements += `
-            <circle cx="${x}" cy="${y}" r="4" fill="white" stroke="var(--color-primary)" stroke-width="2" />
-            <text x="${x}" y="${y - 12}" font-size="12" fill="#1e293b" font-weight="bold" text-anchor="middle" font-family="inherit">${d.value}</text>
-            <text x="${x}" y="${height - 10}" font-size="11" fill="#64748b" text-anchor="middle" font-family="inherit">${d.label}</text>
-        `;
-    });
-
-    const polygonPoints = `${padding},${height - padding} ${points} ${padding + (data.length - 1) * stepX},${height - padding}`;
-
-    return `
-        <svg viewBox="0 0 ${width} ${height}" style="width: 100%; height: auto; display: block; overflow: visible;">
-            <defs>
-                <linearGradient id="chartBg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="var(--color-primary)" stop-opacity="0.15"/>
-                    <stop offset="100%" stop-color="var(--color-primary)" stop-opacity="0"/>
-                </linearGradient>
-            </defs>
-            <polyline points="${points}" fill="none" stroke="var(--color-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-            <polygon points="${polygonPoints}" fill="url(#chartBg)" />
-            ${elements}
-        </svg>
-    `;
-}
-
-window.loadAnalyticsTab = async function() {
-  const content = document.getElementById('panel-content');
-  
-  content.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <h2 style="font-size: 1.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: bottom; margin-left: 8px;"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg> آمار و بازدیدهای من</h2>
-      </div>
-      
-      <!-- دکمه‌های فیلتر زمان -->
-      <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 2rem; align-items: center; padding-bottom: 1.5rem; border-bottom: 2px solid #e2e8f0;">
-          <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate(7, this)">۷ روز گذشته</button>
-          <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate(15, this)">۱۵ روز گذشته</button>
-          <button class="btn btn-primary" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate(30, this)">۳۰ روز گذشته</button>
-          <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate(60, this)">۶۰ روز گذشته</button>
-          <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate(120, this)">۱۲۰ روز گذشته</button>
-          <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate(360, this)">۳۶۰ روز گذشته</button>
-          <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate('all', this)">کل زمان</button>
-          <button class="btn btn-outline" style="padding: 6px 15px; font-size: 0.85rem; border-radius: 20px;" onclick="window.changeSellerAnalyticsDate('custom', this)">زمان‌دهی دستی</button>
-          
-          <div id="sa-custom-date-container" style="display: none; align-items: center; gap: 12px; margin-right: auto; background: white; padding: 6px 16px; border-radius: 30px; border: 1px solid var(--color-border);">
-             <div style="display: flex; align-items: center; gap: 8px;">
-                 <span style="font-size: 0.8rem; color: #64748b;">از:</span>
-                 <input type="date" id="sa-date-from" style="border: none; outline: none; background: transparent; font-size: 0.85rem; font-family: inherit; color: #1e293b; cursor: pointer;">
-             </div>
-             <div style="width: 1px; height: 15px; background: #cbd5e1;"></div>
-             <div style="display: flex; align-items: center; gap: 8px;">
-                 <span style="font-size: 0.8rem; color: #64748b;">تا:</span>
-                 <input type="date" id="sa-date-to" style="border: none; outline: none; background: transparent; font-size: 0.85rem; font-family: inherit; color: #1e293b; cursor: pointer;">
-             </div>
-             <button class="btn btn-primary" style="padding: 4px 16px; font-size: 0.85rem; border-radius: 20px;" onclick="window.applySellerCustomDate()">تأیید</button>
-          </div>
-      </div>
-
-      <div id="sa-data-container">
-          <div style="text-align: center; padding: 3rem; color: #64748b;">در حال محاسبه آمار...</div>
-      </div>
-  `;
-
-  await window.loadAnalyticsTabData();
-};
-
-window.loadAnalyticsTabData = async function() {
-  const container = document.getElementById('sa-data-container');
-  if(!container) return;
-  
-  container.innerHTML = '<div style="text-align: center; padding: 3rem; color: #64748b;">در حال محاسبه مجدد آمار...</div>';
-
-  const stats = await SellerService.getSellerAnalytics(window.sellerAnalyticsState.dateRange);
-
-  if (stats.totalViews === 0 && (!stats.products || stats.products.length === 0)) {
-    container.innerHTML = `
-        <div style="background: #f8fafc; border: 2px dashed #cbd5e1; color: #64748b; padding: 4rem 2rem; text-align: center; border-radius: 16px; margin-bottom: 2rem;">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            <h3 style="margin-bottom: 10px; color: #334155; font-size: 1.2rem;">هنوز آماری برای نمایش وجود ندارد</h3>
-            <p style="font-size: 0.95rem; margin: 0; max-width: 500px; margin: 0 auto;">اطلاعات بازدید واقعی پروفایل و محصولات شما در اینجا نمایش داده خواهد شد. (بازدیدهای خودتان محاسبه نمی‌شود)</p>
-        </div>
-    `;
-    return;
-  }
-
-  let sortedProducts = [...stats.products];
-  if (window.sellerAnalyticsState.sort === 'views_asc') sortedProducts.sort((a,b) => a.views - b.views);
-  if (window.sellerAnalyticsState.sort === 'saves_desc') sortedProducts.sort((a,b) => b.saves - a.saves);
-
-  let itemsHtml = sortedProducts.map(p => `
-      <tr style="border-bottom: 1px solid #f1f5f9;">
-          <td style="padding: 15px 10px; font-weight: 600; color: #1e293b; font-size: 0.9rem;">${p.name}</td>
-          <td style="padding: 15px 10px; text-align: center; font-weight: bold; color: var(--color-primary); font-size: 1.1rem;">${p.views}</td>
-          <td style="padding: 15px 10px; text-align: center; color: #f59e0b; font-weight: bold;">${p.saves}</td>
-      </tr>
-  `).join('');
-
-  if(sortedProducts.length === 0) {
-      itemsHtml = '<tr><td colspan="3" style="text-align:center; padding: 2rem; color: #64748b;">محصولی برای نمایش آمار یافت نشد.</td></tr>';
-  }
-
-  container.innerHTML = `
-      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-          
-          <!-- باکس نمودار خطی -->
-          <div style="background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column;">
-              <h3 style="font-size: 1.1rem; color: #0f172a; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">نمودار روند بازدید کل</h3>
-              <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding-top: 10px;">
-                  ${generateSVGChart(stats.chartData)}
-              </div>
-          </div>
-
-          <!-- باکس‌های آماری راست -->
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-              <div style="background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                  <h3 style="font-size: 1.1rem; color: #64748b; margin-bottom: 1rem;">مجموع بازدید در بازه انتخابی</h3>
-                  <div style="font-size: 4rem; font-weight: 900; color: var(--color-primary); line-height: 1; margin-bottom: 1rem;">${stats.totalViews}</div>
-                  <p style="color: #10b981; font-size: 0.85rem; margin: 0; display: flex; align-items: center; justify-content: center; gap: 5px; background: #ecfdf5; padding: 5px; border-radius: 6px;">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
-                      داده‌های واقعی بر اساس تعامل خریداران
-                  </p>
-              </div>
-
-              <div style="background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); text-align: center; display: flex; justify-content: space-between; align-items: center;">
-                  <h3 style="font-size: 1rem; color: #64748b; margin: 0;">بازدید مستقیم پروفایل</h3>
-                  <div style="font-size: 1.8rem; font-weight: 800; color: #0f172a;">${stats.totalProfileViews} <span style="font-size: 0.9rem; color: #94a3b8; font-weight: normal;">مرتبه</span></div>
-              </div>
-          </div>
-      </div>
-
-      <!-- جدول محصولات -->
-      <div style="background: white; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
-              <h3 style="font-size: 1.1rem; color: #0f172a; margin: 0;">آمار بازدید آیتم‌ها</h3>
-              <select class="form-input" style="width: auto; padding: 4px 12px; font-size: 0.85rem; border-radius: 20px; background-color: #f8fafc;" onchange="window.changeSellerAnalyticsSort(this.value)">
-                  <option value="views_desc" ${window.sellerAnalyticsState.sort === 'views_desc' ? 'selected' : ''}>بیشترین بازدید</option>
-                  <option value="views_asc" ${window.sellerAnalyticsState.sort === 'views_asc' ? 'selected' : ''}>کمترین بازدید</option>
-                  <option value="saves_desc" ${window.sellerAnalyticsState.sort === 'saves_desc' ? 'selected' : ''}>بیشترین دفعات نشان‌کردن</option>
-              </select>
-          </div>
-          <div style="max-height: 400px; overflow-y: auto;">
-              <table class="panel-table" style="width: 100%; border: none;">
-                  <thead style="position: sticky; top: 0; background: white; z-index: 1;">
-                      <tr>
-                          <th style="padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; background: white;">عنوان آیتم (کالا/خدمات)</th>
-                          <th style="padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; background: white; text-align: center;">تعداد بازدید</th>
-                          <th style="padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; background: white; text-align: center;">دفعات ذخیره</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      ${itemsHtml}
-                  </tbody>
-              </table>
-          </div>
-      </div>
-      
-      <!-- 🌟 بنر ورود به تحلیل بازار در انتهای تب با لینک به صفحه جدید 🌟 -->
-      <div style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-radius: 12px; padding: 2rem; color: white; display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);">
-          <div>
-              <h2 style="color: white; font-size: 1.4rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                  تحلیل و هوش بازار (Market Intelligence)
-              </h2>
-              <p style="color: #bfdbfe; font-size: 0.95rem; margin: 0;">با بررسی رفتار خریداران در کل پلتفرم، تقاضای بازار، رقبا و فرصت‌های صادراتی را کشف کنید.</p>
-          </div>
-          <a href="market-intelligence.html" target="_blank" class="btn" style="background: white; color: #1e40af; font-weight: bold; padding: 10px 24px; border-radius: 8px; text-decoration: none;">
-              ورود به رادار بازار
-          </a>
-      </div>
-  `;
 };

@@ -53,11 +53,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     await ReviewComponent.init('company-reviews-container', 'company', business.id);
 });
 
+// 🌟 تابع اختصاصی مقایسه شرکت با محدودیت 5 تایی
+window.toggleSingleBizCompare = (id) => {
+    const currentList = AppStore.getSupplierShortlist();
+    const isCurrentlyAdded = currentList.includes(id);
+
+    // کنترل محدودیت 5 تایی
+    if (!isCurrentlyAdded && currentList.length >= 5) {
+        alert('حداکثر ۵ شرکت برای مقایسه همزمان قابل انتخاب است. جهت افزودن شرکت جدید، لیست مقایسه را در داشبورد خود خلوت کنید.');
+        return;
+    }
+
+    AppStore.toggleShortlist(id);
+    const isAdded = AppStore.getSupplierShortlist().includes(id);
+    const btn = document.getElementById('single-biz-compare-btn');
+
+    if (isAdded) {
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+        btn.style.background = '#1e293b';
+        btn.style.borderColor = '#1e293b';
+        btn.style.color = '#fff';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-left:5px;"><polyline points="20 6 9 17 4 12"></polyline></svg> حذف از لیست مقایسه';
+    } else {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline');
+        btn.style.background = 'transparent';
+        btn.style.borderColor = '#cbd5e1';
+        btn.style.color = '#475569';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-left:5px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن به لیست مقایسه';
+    }
+};
+
 function renderBusinessProfile(business, products, isFavorite, companyArticles) {
     const starFilled = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
     const starOutline = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
     const locIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
     const checkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; vertical-align: middle;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+    // بررسی وضعیت فعلی دکمه مقایسه برای استایل‌دهی در لحظه لود
+    const isAddedToCompare = AppStore.getSupplierShortlist().includes(business.id);
+    const compareBtnStyle = isAddedToCompare ? 'background:#1e293b; border-color:#1e293b; color:#fff;' : 'background:transparent; border-color:#cbd5e1; color:#475569;';
+    const compareBtnClass = isAddedToCompare ? 'btn-primary' : 'btn-outline';
+    const compareBtnText = isAddedToCompare 
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-left:5px;"><polyline points="20 6 9 17 4 12"></polyline></svg> حذف از لیست مقایسه' 
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:text-bottom; margin-left:5px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن به لیست مقایسه';
 
     const content = `
         <div class="container" style="margin-top: 2rem; margin-bottom: 2rem;">
@@ -73,9 +113,15 @@ function renderBusinessProfile(business, products, isFavorite, companyArticles) 
                 </div>
                 
                 <div style="text-align: left; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- 🌟 دکمه مقایسه اضافه شد 🌟 -->
+                    <button id="single-biz-compare-btn" class="btn ${compareBtnClass}" style="display: inline-flex; align-items: center; justify-content: center; font-weight: bold; width: 240px; transition: all 0.3s ease; ${compareBtnStyle}" onclick="window.toggleSingleBizCompare('${business.id}')">
+                        ${compareBtnText}
+                    </button>
+                    
                     <button class="btn btn-primary" style="display: inline-flex; align-items: center; justify-content: center; font-weight: bold; width: 240px; transition: all 0.3s ease;" onclick="startDirectChat('${business.id}', '${business.name}')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 8px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> گفتگوی مستقیم
                     </button>
+                    
                     <button id="btn-favorite-business" class="btn btn-outline" style="display: inline-flex; align-items: center; justify-content: center; font-weight: bold; width: 240px; transition: all 0.3s ease; border-color: ${isFavorite ? '#eab308' : '#cbd5e1'}; color: ${isFavorite ? '#eab308' : '#475569'}; background: ${isFavorite ? '#fefce8' : 'transparent'};">
                         ${isFavorite ? starFilled + ' شرکت نشان شد' : starOutline + ' افزودن شرکت به نشان‌شده‌ها'}
                     </button>
@@ -217,4 +263,4 @@ function setupBusinessEvents(business) {
             btn.style.background = 'transparent';
         }
     });
-}
+};

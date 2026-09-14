@@ -4,7 +4,6 @@ import { BusinessService } from './businessService.js';
 import { products } from '../data/products.js';
 import { CategoryService } from './categoryService.js';
 
-// ۱. تابع دریافت محصولات پیشنهادی
 async function getFeaturedProducts(limit = 8) {
   try {
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -28,7 +27,6 @@ async function getFeaturedProducts(limit = 8) {
   }
 }
 
-// ۲. تابع جستجوی محصولات
 async function searchProducts(query) {
   try {
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -63,7 +61,6 @@ async function searchProducts(query) {
   }
 }
 
-// ۳. تابع دریافت یک محصول خاص با ID
 async function getProductById(id) {
   try {
     await new Promise(resolve => setTimeout(resolve, 200)); 
@@ -85,7 +82,6 @@ async function getProductById(id) {
   }
 }
 
-// ۴. تابع دریافت محصولات یک شرکت خاص
 async function getProductsBySupplierId(supplierId) {
   try {
     await new Promise(resolve => setTimeout(resolve, 200)); 
@@ -107,15 +103,12 @@ async function getProductsBySupplierId(supplierId) {
   }
 }
 
-// ۵. تابع دریافت محصولات بر اساس دسته‌بندی خاص (اضافه شده جدید 🌟)
 async function getProductsByCategoryId(categoryId) {
   try {
     await new Promise(resolve => setTimeout(resolve, 200));
     
-    // اگر گفت همه محصولات، همه رو برگردون
     let matchedProducts = products.filter(p => p.status === 'active');
     
-    // در غیر این صورت فیلتر کن
     if (categoryId && categoryId !== 'all') {
       matchedProducts = matchedProducts.filter(p => p.categoryId === categoryId);
     }
@@ -139,11 +132,32 @@ async function getProductsByCategoryId(categoryId) {
   }
 }
 
-// فقط یک‌بار و در انتهای فایل، تمام توابع را با هم Export می‌کنیم:
+// 🌟 توابع جدید برای حذف و ویرایش (MVP)
+async function deleteProduct(id) {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const index = products.findIndex(p => p.id === id);
+    if (index !== -1) {
+        products.splice(index, 1); // حذف از آرایه موقت در دمو
+    }
+    return true;
+}
+
+async function updateProductMinimal(id, data) {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const prod = products.find(p => p.id === id);
+    if (prod) {
+        if (data.name) prod.name = data.name;
+        if (data.shortDescription) prod.shortDescription = data.shortDescription;
+    }
+    return true;
+}
+
 export const ProductService = {
   getFeaturedProducts,
   searchProducts,
   getProductById,
   getProductsBySupplierId,
-  getProductsByCategoryId // 👈 این خط به خروجی‌ها اضافه شد
+  getProductsByCategoryId,
+  deleteProduct, // 👈 متد جدید
+  updateProductMinimal // 👈 متد جدید
 };

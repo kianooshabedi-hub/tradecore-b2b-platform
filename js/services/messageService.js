@@ -7,7 +7,7 @@ export const MessageService = {
     
     // دریافت تمام چت‌های کاربر فعال
     getMyConversations: async () => {
-        await new Promise(resolve => setTimeout(resolve, 100)); // Mock latency
+        await new Promise(resolve => setTimeout(resolve, 100)); // شبیه‌سازی تاخیر شبکه
         const userId = AppStore.getActiveUserId();
         const allConvs = AppStore.getAllConversations();
         
@@ -23,9 +23,29 @@ export const MessageService = {
         }).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     },
 
-    // ایجاد یک چت جدید (مثلاً بعد از تایید پروپوزال)
+    // 🌟 رفع باگ: جلوگیری از ایجاد چند پی‌وی (PV) تکراری بین دو نفر 🌟
     createConversation: async (participantIds, subject, relatedId = null) => {
         const convs = AppStore.getAllConversations();
+        
+        // بررسی هوشمند: آیا قبلاً بین این افراد (مهم نیست کی شروع کرده) چتی ایجاد شده؟
+        let existingConv = convs.find(c => 
+            c.participants.length === participantIds.length &&
+            participantIds.every(id => c.participants.includes(id))
+        );
+
+        if (existingConv) {
+            // اگر چت وجود داشت، چت جدیدی نمی‌سازیم! 
+            // فقط موضوع (Subject) اون پی‌وی رو به معامله/مذاکره جدید آپدیت می‌کنیم
+            // اینطوری هم تاریخچه قبلی حفظ میشه و هم کاربر می‌فهمه موضوع بحث چیه.
+            existingConv.subject = subject;
+            if (relatedId) existingConv.relatedId = relatedId;
+            existingConv.updatedAt = new Date().toISOString();
+            
+            AppStore.saveConversations(convs);
+            return existingConv;
+        }
+
+        // اگر هیچ سابقه چتی وجود نداشت، یک پی‌وی کاملاً جدید ایجاد می‌کنیم
         const newConv = {
             id: 'conv-' + Date.now(),
             participants: participantIds,

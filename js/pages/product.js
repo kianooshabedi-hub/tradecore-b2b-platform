@@ -51,9 +51,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     await ReviewComponent.init('product-reviews-container', 'product', currentProduct.id);
 });
 
+// 🌟 تابع اختصاصی برای دکمه مقایسه با محدودیت ۵ تایی
+window.toggleSingleProdCompare = (btn) => {
+    if (!currentProduct) return;
+    
+    const currentList = AppStore.getFavProducts();
+    const isCurrentlyAdded = currentList.includes(currentProduct.id);
+
+    // کنترل محدودیت 5 تایی
+    if (!isCurrentlyAdded && currentList.length >= 5) {
+        alert('حداکثر ۵ محصول برای مقایسه همزمان قابل انتخاب است. جهت مقایسه محصول جدید، ابتدا یکی از محصولات لیست را حذف کنید.');
+        return;
+    }
+
+    AppStore.toggleFavProduct(currentProduct.id);
+    const isAdded = AppStore.getFavProducts().includes(currentProduct.id);
+    
+    if (isAdded) {
+        btn.style.background = '#1e293b';
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#1e293b';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-left:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> حذف از مقایسه';
+    } else {
+        btn.style.background = 'transparent';
+        btn.style.color = '#475569';
+        btn.style.borderColor = '#cbd5e1';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-left:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن به مقایسه';
+    }
+};
+
 function renderProduct(product, supplier, isFavorite) {
     let specsHtml = '';
-    if (product.specifications) {
+    // بررسی اگر از سیستم جدید استفاده شده باشد
+    if (product.technicalAttributes && product.technicalAttributes.length > 0) {
+        specsHtml = product.technicalAttributes.map(attr => `
+            <div style="display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0;">
+                <span style="font-weight: 600; color: #475569;">${attr.attributeName}:</span>
+                <span style="color: #64748b; text-align: left;" dir="ltr">${attr.value} ${attr.unitName || ''}</span>
+            </div>
+        `).join('');
+    } 
+    // بک‌آپ برای ساختار قدیمی
+    else if (product.specifications) {
         specsHtml = Object.entries(product.specifications).map(([key, value]) => `
             <div style="display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #e2e8f0;">
                 <span style="font-weight: 600; color: #475569;">${key}:</span>
@@ -61,6 +100,9 @@ function renderProduct(product, supplier, isFavorite) {
             </div>
         `).join('');
     }
+
+    const compareList = AppStore.getFavProducts();
+    const isCompared = compareList.includes(product.id);
 
     const content = `
         <div class="container" style="margin-top: 3rem; margin-bottom: 3rem;">
@@ -100,9 +142,16 @@ function renderProduct(product, supplier, isFavorite) {
                             </button>
                         </div>
 
-                        <button id="btn-favorite-product" class="btn btn-outline btn-full" style="font-weight: bold; transition: all 0.3s ease; border-color: ${isFavorite ? '#eab308' : '#cbd5e1'}; color: ${isFavorite ? '#eab308' : '#475569'}; background: ${isFavorite ? '#fefce8' : 'transparent'}; display: flex; justify-content: center; align-items: center;" onclick="toggleFavoriteProduct(this)">
-                            ${isFavorite ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> در علاقه‌مندی‌ها ذخیره شد' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> افزودن به علاقه‌مندی‌ها'}
-                        </button>
+                        <!-- 🌟 دکمه مقایسه و علاقه‌مندی‌ها دقیقاً در کنار هم 🌟 -->
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button id="btn-favorite-product" class="btn btn-outline" style="flex: 1; font-weight: bold; transition: all 0.3s ease; border-color: ${isFavorite ? '#eab308' : '#cbd5e1'}; color: ${isFavorite ? '#eab308' : '#475569'}; background: ${isFavorite ? '#fefce8' : 'transparent'}; display: flex; justify-content: center; align-items: center; padding: 10px;" onclick="toggleFavoriteProduct(this)">
+                                ${isFavorite ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> در علاقه‌مندی‌ها' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> افزودن به علاقه‌مندی‌ها'}
+                            </button>
+
+                            <button onclick="window.toggleSingleProdCompare(this)" class="btn btn-outline" style="flex: 1; font-weight: bold; transition: all 0.3s ease; border-color: ${isCompared ? '#1e293b' : '#cbd5e1'}; color: ${isCompared ? '#fff' : '#475569'}; background: ${isCompared ? '#1e293b' : 'transparent'}; display: flex; justify-content: center; align-items: center; padding: 10px;">
+                                ${isCompared ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-left:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg> حذف از مقایسه' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-left:4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> افزودن به مقایسه'}
+                            </button>
+                        </div>
                     </div>
 
                     <h3 style="margin-bottom: 1rem; color: #1e293b; font-size: 1.2rem;">مشخصات فنی</h3>
@@ -165,7 +214,6 @@ window.toggleFavoriteProduct = (btn) => {
     if (!currentProduct) return;
     const activeUserId = AppStore.getActiveUserId();
     
-    // 🌟 قانون جدید: جلوگیری از Save کردن محصول خود 🌟
     if (activeUserId === currentProduct.supplierId) {
         alert('شما نمی‌توانید محصول شرکت خودتان را نشان (Save) کنید!');
         return;

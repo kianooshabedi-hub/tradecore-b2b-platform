@@ -97,5 +97,21 @@ export const AdminService = {
     getActivityLogs: async () => {
         await new Promise(resolve => setTimeout(resolve, 100));
         return AdminStore.getAuditLogs();
+    },
+    // دریافت تنظیمات پلتفرم
+    getPlatformSettings: async () => {
+        await new Promise(resolve => setTimeout(resolve, 150));
+        return AdminStore.getData().settings;
+    },
+
+    // ذخیره و آپدیت تنظیمات
+    savePlatformSettings: async (newSettings) => {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const data = AdminStore.getData();
+        data.settings = { ...data.settings, ...newSettings };
+        AdminStore.saveData(data);
+        
+        AdminStore.addAuditLog('UPDATE_SETTINGS', 'System', 'all', 'پیکربندی هسته پلتفرم به‌روزرسانی شد');
+        return true;
     }
 };
